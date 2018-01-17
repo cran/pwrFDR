@@ -1,0 +1,21 @@
+useDynLib(pwrFDR, .registration = TRUE)
+
+importFrom("methods", "is")
+importFrom("stats", "dbinom", "optimize", "pbeta", "pf", "pnorm", "qnorm", "qf", "var")
+
+export(CDF.Pval, CDF.Pval.HA, cCDF.SoM, cCDF.ToJ, detail, dists, gentempfilenm, logit, logitInv,
+       pwrFDR, var.J.o.rtm, var.rtm.SoM, var.rtm.ToJ, find.f.star, "%,%", "%over%")
+
+S3method(print, pwr)
+S3method(print, vvv)
+S3method(`+`, pwr)
+S3method(`-`, pwr)
+S3method(`*`, pwr)
+S3method(`/`, pwr)
+S3method(`^`, pwr)
+S3method(exp, pwr)
+S3method(log, pwr)
+S3method(logit, default)
+S3method(logitInv, default)
+S3method(logit, pwr)
+S3method(logitInv, pwr)
