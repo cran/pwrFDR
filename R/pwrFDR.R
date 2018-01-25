@@ -226,6 +226,7 @@ function (groups, effect.size, n.sample, r.1, FDR, N.tests, lambda, control)
         m <- .call.
         m[[1]] <- as.name("pwrFDR.apx.1X")
         m$N.tests <- 500
+        m$lambda <- m$L.power <- NULL
         avg.pwr <- eval(m)$average.power
         if(average.power < avg.pwr)
         {
@@ -233,6 +234,7 @@ function (groups, effect.size, n.sample, r.1, FDR, N.tests, lambda, control)
             m[[1]] <- as.name("pwrFDR.JL.1X")
             m$control <- eval(m$control)
             m$control$version <- 1
+            m$lambda <- m$L.power <- NULL
             
             res <- eval(m)
             average.power <- res$average.power

@@ -4,8 +4,8 @@
   Power in the BH-FDR procedure.
 }
 \description{
-  Calculates average power or lambda-power in the Benjamini-Hochberg
-  FDR procedure, or sample size required for given average- or lambda- power.
+  Calculates average power or \eqn{\lambda}-power in the Benjamini-Hochberg
+  FDR procedure, or sample size required for given average- or \eqn{\lambda}- power.
 }
 \usage{
   pwrFDR(groups, effect.size, n.sample, r.1, FDR, N.tests, average.power,
@@ -38,14 +38,14 @@
     specification of either 'average.power' or 'L.power'.
   }
   \item{L.power}{
-    The desired lambda-power (see details for explanation). Sample
+    The desired \eqn{\lambda}-power (see details for explanation). Sample
     size calculation requires specification of either 'average.power'
     or 'L.power'.
   }
   \item{lambda}{
-    The lambda-power threshold, required when calculating the
-    lambda-power (see details for explanation) or when calculating
-    the sample size required for lambda-power.    
+    The \eqn{\lambda}-power threshold, required when calculating the
+    \eqn{\lambda}-power (see details for explanation) or when calculating
+    the sample size required for \eqn{\lambda}-power.    
   }
   \item{method}{
     Specify the method whereby the average power is calculated. The
@@ -92,15 +92,15 @@
   'r.1', of the 'm' test statistics are given a non-centrally located
   distribution, the remaining proportion are given a centrally
   distribution. Each of the non-centrally located test statistics is
-  given the same location parameter. Suppose that a total of 'M.1'
+  given the same location parameter. Suppose that a total of 'M'
   are chosen to have a non-central distribution, that a total of 'J'
   of all 'm' statistics are declared significant, and that of these,
   'S' come from the non-centrally located population. This results in
   the following table. 
   \tabular{rrccc}{
     1. \tab             \tab rej H0  \tab acc H0         \tab row Total \cr
-    2. \tab H0 is FALSE \tab   S     \tab M.1-S          \tab M.1       \cr
-    3. \tab H0 is TRUE  \tab J-S     \tab (m-M.1)-(J-S)  \tab m-M.1     \cr
+    2. \tab H0 is FALSE \tab   S     \tab M-S            \tab M         \cr
+    3. \tab H0 is TRUE  \tab J-S     \tab (m-M)-(J-S)    \tab m-M.1     \cr
     4. \tab col Total   \tab   J     \tab m-J            \tab m         \cr
   }
   
@@ -108,22 +108,22 @@
   the average power,
 
   AVERAGE POWER:
-  E[ S/M.1 ]
+  \eqn{E[ S/M ]}
 
   This is approximated using the infinite tests limit.
 
-  When 'n.sample' and 'lambda' are both specified, the function computes
-  the lambda-power, which is the probability:
+  When 'n.sample' and '\eqn{\lambda}' are both specified, the function computes
+  the \eqn{\lambda}-power, which is the probability:
 
-  LAMBDA-POWER:
-  P{ S/M.1 > lambda } 
+  \eqn{\lambda}-POWER:
+  \eqn{P{ S/M > \lambda }}
   
-  that the true positive fraction S/M exceeds the threshold, 'lambda'.
+  that the true positive fraction S/M exceeds the threshold, '\eqn{\lambda}'.
   This is done using an asymptotic approximation. If the user 
-  desires instead the sample size required for given average- or lambda-
+  desires instead the sample size required for given average- or \eqn{\lambda}-
   power, then leave the argument 'n.sample' unspecified and specify
-  instead either the 'average.power' or the 'lambda', the threshold for
-  the lambda-power. By default, the model uses the assumption that test
+  instead either the 'average.power' or the '\eqn{\lambda}', the threshold for
+  the \eqn{\lambda}-power. By default, the model uses the assumption that test
   statistics are distributed as t-distributed as in the two group
   comparison. If the user specifies a value of 'groups' larger than 2
   then the model assumes the test statistics are F-distributed as in
