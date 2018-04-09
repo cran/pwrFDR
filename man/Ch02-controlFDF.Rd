@@ -1,5 +1,5 @@
-\name{find.f.star}
-\alias{find.f.star}
+\name{controlFDF}
+\alias{controlFDF}
 \title{
   Calculates a reduced FDR required to control the FDF
 }
@@ -8,7 +8,8 @@
   discovery rate in probability. 
 }
 \usage{
-  find.f.star(groups, FDR, r.1, N.tests, effect.size, n.sample)
+  controlFDF(groups=2, FDR, r.1, N.tests, effect.size, n.sample,
+             use.prob=c("f*","f","user"), prob=NULL)
 }
 \arguments{
   \item{groups}{
@@ -30,6 +31,17 @@
   }
   \item{n.sample}{
     The number of experimental replicates.
+  }
+  \item{use.prob}{
+    This sets the value of the probability that the FDF exceeds
+    lambda*. Set this to the character string 'f*' (default) and
+    the routine uses the value of f*. Set this to 'f' and the routine
+    uses the value of the FDR. Set this to 'user' and then you
+    can specify any desired probability in the argument 'prob'.
+  }
+  \item{prob}{
+    The desired probability that the FDF exceeds lambda* that is
+    user specified when the argument 'use.prob' is set to 'user'.
   }
 }
 \details{
@@ -75,7 +87,7 @@ pwr.46.15 <- pwrFDR(FDR=0.15, r.1=0.03, N.tests=1000, effect.size=0.79, n.sample
 ## when there are 'only' N.tests=1000 simultaneous tests, the distribution of the
 ## false discovery fraction, FDF, is not so highly spiked at the FDR=0.15
 ## You need to set the FDR down to FDR=0.0657 to ensure that  Pr( T/J > 0.145 ) < 0.0657
-fstr <- find.f.star(FDR=0.15, r.1=0.03, N.tests=1000, effect.size=0.8, n.sample=46)
+fstr <- controlFDF(FDR=0.15, r.1=0.03, N.tests=1000, effect.size=0.8, n.sample=46)
 
 ## at all the above settings, with FDR=0.0657 at an n.sample of 46, we only have 69% 
 ## average power.

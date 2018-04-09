@@ -102,7 +102,7 @@
   Grant Izmirlian <izmirlian at nih dot gov>
 }
 \seealso{
-  \code{\link{find.f.star}}
+  \code{\link{controlFDF}}
   \code{\link{cCDF.SoM}}
 }
 \examples{

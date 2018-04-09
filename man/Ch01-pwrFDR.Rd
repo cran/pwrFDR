@@ -116,7 +116,7 @@
   the \eqn{\lambda}-power, which is the probability:
 
   \eqn{\lambda}-POWER:
-  \eqn{P{ S/M > \lambda }}
+  \eqn{P\{ S/M > \lambda \}}
   
   that the true positive fraction S/M exceeds the threshold, '\eqn{\lambda}'.
   This is done using an asymptotic approximation. If the user 
@@ -158,7 +158,7 @@
   Grant Izmirlian <izmirlian at nih dot gov>
 }
 \seealso{
-  \code{\link{find.f.star}}
+  \code{\link{controlFDF}}
 }
 \examples{
 ## Example 1a: average power

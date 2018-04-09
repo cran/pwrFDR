@@ -14,7 +14,7 @@ typedef struct{
 int cmprXPH(const void *, const void *);
 
 void pwrFDRsimCS(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, double *ptheta,
-		 double *prho, int *pnWC, int *pM, int *pJ, int *pS, double *pX)
+		 double *prho, int *pnWC, int *pM, int *pJ, int *pS, double *pX_i, int *pM_i)
 {
     int nsim=*pnsim, Ng=*pNg, nWC=*pnWC, m1, ii, j, J_, cS_, n, done, h, k, nC;
     double r1, xN, xnsim, xM1, X_j, FDR=*pFDR, *fdrcrit, theta=*ptheta, rtnth, U, xdf, Z;
@@ -43,6 +43,7 @@ void pwrFDRsimCS(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, doubl
     {
       *(pM+ii) = m1 = (int) rbinom(xN, r1);
       xM1 = (double) m1;
+      if(ii==0) *pM_i = m1;
       for(h=0;h<nC;h++)
       {
 	/* simulate the Z for this cluster */
@@ -55,7 +56,7 @@ void pwrFDRsimCS(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, doubl
 	  U = unif_rand();
 	  X_j = qnorm5(U, 0.0, sig, 0, 0) + Z;
 	  if(j < m1) X_j = X_j + rtnth;
-          if(ii==0) *(pX + j) = X_j;
+          if(ii==0) *(pX_i + j) = X_j;
 
 	  (pXPH+j)->X = X_j;
 	  (pXPH+j)->pval = 2.0*pnorm5(fabs(X_j), 0.0, 1.0, 0, 0);

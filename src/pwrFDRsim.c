@@ -79,7 +79,7 @@ double qdist(double x, distpars *par)
 int cmprXPH(const void *, const void *);
 
 void pwrFDRsim(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, double *ptheta,
-	       int *pdistopt, double *pgroups, int *pM, int *pJ, int *pS, double *pX)
+	       int *pdistopt, double *pgroups, int *pM, int *pJ, int *pS, double *pX_i, int *pM_i)
 {
     int nsim=*pnsim, Ng=*pNg, m1, ii, j, J_, cS_, n=*pn, done, idistopt=*pdistopt;
     double r1=*pr1, xN, xnsim, xn, xgroups=*pgroups, TWO, xM1, X_j, FDR=*pFDR, *fdrcrit, theta=*ptheta, rtnth, U, xncp;
@@ -138,6 +138,7 @@ void pwrFDRsim(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, double 
     {
       *(pM+ii) = m1 = (int) rbinom(xN, r1);
       xM1 = (double) m1;
+      if(ii==0) *pM_i = m1;
       for(j=0;j<Ng;j++)
       {
         par0->p1 = par1->p1 = 0.0;
@@ -146,7 +147,7 @@ void pwrFDRsim(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, double 
         U = unif_rand();
 	X_j = qdist(U, par1);
 	
-        if(ii==0) *(pX + j) = X_j;
+        if(ii==0) *(pX_i + j) = X_j;
 
         (pXPH+j)->index = (j+1);
         (pXPH+j)->X = X_j;

@@ -430,6 +430,11 @@ function (groups, effect.size, n.sample, r.1, FDR, N.tests, control)
 function (groups, effect.size, n.sample, r.1, FDR, N.tests, control, lambda, n.sim=1000)
 {
     .call. <- match.call()
+    idistopt <- control$distopt    
+    pars0 <- eval(dists$pars0[[1+idistopt]])
+    pars1 <- eval(dists$pars1[[1+idistopt]])
+    is.pos <- (dists$minv[[1+idistopt]]==0)
+
     nsim <- n.sim
     do.L.power <- !missing(lambda)
 
@@ -448,7 +453,8 @@ function (groups, effect.size, n.sample, r.1, FDR, N.tests, control, lambda, n.s
                  M1      = integer(nsim),
                  J       = integer(nsim),
                  S       = integer(nsim),
-                 X       = double(N.tests),
+                 X.i     = double(N.tests),
+                 M.i     = integer(1),
                  PACKAGE = "pwrFDR")
     }
     if(is.CS)
@@ -478,7 +484,8 @@ function (groups, effect.size, n.sample, r.1, FDR, N.tests, control, lambda, n.s
                  M1      = integer(nsim),
                  J       = integer(nsim),
                  S       = integer(nsim),
-                 X       = double(N.tests),
+                 X.i     = double(N.tests),
+                 M.i     = integer(1),
                  PACKAGE = "pwrFDR")     
     }
 
@@ -511,7 +518,13 @@ function (groups, effect.size, n.sample, r.1, FDR, N.tests, control, lambda, n.s
     }
        
     dtl <- list(reps=data.frame(M1=M1, J=J, S=S), CCDF=data.frame(u=u, CCDF=CCDF.SoM))
-    dtl$X <- rslt$X
+    X.i <- rslt$X.i
+    M.i <- rslt$M.i
+    rep.i <- cbind(X=X.i, xi=c(rep(1, M.i), rep(0, N.tests - M.i)))
+    rep.i <- as.data.frame(cbind(rep.i, pval=2^(!is.pos)*(1-pdist(abs(X.i), pars0))))
+    rep.i <- rep.i[order(rep.i$pval), ]
+    rep.i$BHFDRcrit <- FDR*(1:N.tests)/N.tests
+    dtl$X <- rep.i
     attr(out, "detail") <- dtl
     class(out) <- "pwr"
     out
@@ -1002,26 +1015,41 @@ function(x=NULL, groups=2, effect.size, n.sample, r.1, FDR, N.tests, control)
 # 2. stipulate f
 # 3. find f* such that:  (1-r)f = (1-r)f* + (v(f*)/m)^0.5 qnorm(1-(1-r)f*)
 
-"find.f.star" <-
-function(groups=2, FDR, r.1, N.tests, effect.size, n.sample)
+"controlFDF" <-
+function(groups=2, FDR, r.1, N.tests, effect.size, n.sample, use.prob=c("f*","f","user"), prob=NULL)
 {
   .call. <- match.call()
+  if(missing(use.prob)) use.prob <- "f*"
+  if(missing(prob)) prob <- 0
+  bad <- FALSE
+  if(!missing(use.prob)) if(!(use.prob %in% c("f*","f","user"))) bad <- TRUE
+  if(!bad) if(use.prob=="user") if(missing(prob)) bad <- TRUE
+  if(!bad) if(use.prob=="user" && (prob <= 0 || prob >= 1)) bad <- TRUE
+  if(bad) stop("If argument 'use.prob' is set to 'user' then argument 'prob' must " %,%
+               "be set to a numeric between 0 and 1")
   OBJ <-
-  function(x, groups, FDR, r.1, N.tests, effect.size, n.sample)
+  function(x, groups, FDR, r.1, N.tests, effect.size, n.sample, use.prob, prob)
   {
     f.star <- logitInv(x)
+    if(use.prob=="f*") prob <- f.star
+    if(use.prob=="f") prob <- FDR
     pwr <- pwrFDR(groups=groups, effect.size=effect.size, n.sample=n.sample, r.1=r.1, FDR=f.star)
     v <- var.rtm.ToJ(pwr)$var
-    ( ( (1-r.1)*FDR - ((1-r.1)*f.star + (v/N.tests)^0.5 * qnorm(1 -(1-r.1)*f.star))  )^2 )/1.25
+    ( ( (1-r.1)*FDR - ((1-r.1)*f.star + (v/N.tests)^0.5 * qnorm(1 -(1-r.1)*prob))  )^2 )/1.25
   }
+  
   rslt <- 
-  optimize(f=OBJ, lower=-8, upper=8, groups=groups, FDR=FDR, r.1=r.1, N.tests=N.tests, effect.size=effect.size, n.sample=n.sample)
+      optimize(f=OBJ, lower=-8, upper=8, groups=groups, FDR=FDR, r.1=r.1, N.tests=N.tests, effect.size=effect.size,
+               n.sample=n.sample, use.prob=use.prob, prob=prob)
   f.star <- logitInv(rslt$min)
+  if(use.prob=="f*") prob <- f.star
+  if(use.prob=="f") prob <- FDR
   pwr <- pwrFDR(groups=groups, effect.size=effect.size, n.sample=n.sample, r.1=r.1, FDR=f.star)
-  v <- var.rtm.ToJ(pwr)$var
-  lambda.star <- ((1-r.1)*f.star + (v/N.tests)^0.5 * qnorm(1 -(1-r.1)*f.star))
+  v <- var.rtm.ToJ(pwr)$var 
+  lambda.star <- ((1-r.1)*f.star + (v/N.tests)^0.5 * qnorm(1 -(1-r.1)*prob))
   prob.star <- 1-pnorm(N.tests^0.5*(lambda.star - (1-r.1)*f.star)/v^0.5)
   obj <- rslt$objective
+  
   out <- as.data.frame(list(f.star=f.star, obj=obj, L.star=lambda.star, P.star=prob.star))
   out <- c(out, pwr)
   out$call <- .call.
