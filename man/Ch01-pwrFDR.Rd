@@ -8,8 +8,11 @@
   FDR procedure, or sample size required for given average- or \eqn{\lambda}- power.
 }
 \usage{
-  pwrFDR(groups, effect.size, n.sample, r.1, FDR, N.tests, average.power,
-         L.power, lambda, method, control, n.sim, temp.file)
+  pwrFDR(groups = 2, effect.size, n.sample, r.1, FDR, use.LFD = FALSE, 
+         N.tests, average.power, L.power, lambda, method = c("approximate", 
+         "simulation", "JL", "Iz"), control = list(version = 0, 
+         tol = 1e-08, max.iter = 1000, distopt = 1, CS = list(NULL), 
+         verb = FALSE), n.sim = 1000, temp.file) 
 }
 \arguments{
   \item{groups}{
@@ -29,6 +32,19 @@
   } 
   \item{FDR}{
     The false discovery rate.
+  }
+  \item{use.LFD}{
+    Under the default value, 'FALSE', the procedure is controlled
+    under the specified FDR.  Specifying "use.LFD=TRUE" will
+    instead first find an FDR, FDR.star, so that the probability that
+    the FDF exceeds FDR.star is less than or equal to the originally
+    specified FDR. Power (either average- or lambda-) or sample size
+    under the average- or lambda- power is then calculated when the
+    procedure is controlled at FDR.star. This is recommended when the
+    distribution of the FDF is wide enough to matter but still well
+    approximated by its asymptotic distribution, e.g. between
+    several hundred and several thousand simultaneous tests. The
+    argument 'N.tests' is required when "use.LFD=TRUE".
   }
   \item{N.tests}{
     The number of simultaneous hypothesis tests. 
@@ -66,7 +82,7 @@
     average power, which is the 'Iz' version, but this is redundant
     because you can specify the 'Iz' method to use this option.
     'tol' is a convergence criterion used in iterative methods
-    which is set to 1e-8 by default
+    which is set to 1e-8 by default 
     'max.iter' is an iteration limit, set to 1000 by default
     'distop', specifying the distribution family of the central and
       non-centrally located sub-populations. =1 gives normal (2 groups)
@@ -136,6 +152,14 @@
   An object of class "pwr" with with components including:
   \item{call}{The call which produced the result}
   \item{average.power}{Resulting average power.}
+  \item{L.power}{When 'lambda' is specified, the lambda-power is also computed}
+  \item{L.eq}{The lambda at which the lambda-power and average-power are equal.}
+  \item{n.sample}{If 'n.sample' is missing from the argument list, then
+    the sample size required for the specified average- or lambda-
+    power.}
+  \item{FDR.star}{If "use.LFD=TRUE" was specified, the FDR at which
+    the probability that the FDF exceeds FDR.star is less than or equal
+    to the originally specified FDR.}
   \item{c.g}{The BH-FDR threshold on the scale of the test statistics.}
   \item{gamma}{The proportion of all 'm' tests declared significant.}
   \item{objective}{Result of optimization yielding the 'average.power'.}

@@ -79,7 +79,8 @@ double qdist(double x, distpars *par)
 int cmprXPH(const void *, const void *);
 
 void pwrFDRsim(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, double *ptheta,
-	       int *pdistopt, double *pgroups, int *pM, int *pJ, int *pS, double *pX_i, int *pM_i)
+	       int *pdistopt, double *pgroups, int *pverb, int *pM, int *pJ, int *pS, 
+	       double *pX_i, int *pM_i)
 {
     int nsim=*pnsim, Ng=*pNg, m1, ii, j, J_, cS_, n=*pn, done, idistopt=*pdistopt;
     double r1=*pr1, xN, xnsim, xn, xgroups=*pgroups, TWO, xM1, X_j, FDR=*pFDR, *fdrcrit, theta=*ptheta, rtnth, U, xncp;

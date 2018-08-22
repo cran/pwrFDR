@@ -1,13 +1,14 @@
 useDynLib(pwrFDR, .registration = TRUE)
 
 importFrom("methods", "is")
-importFrom("stats", "dbinom", "optimize", "pbeta", "pf", "pnorm", "qnorm", "qf", "var")
+importFrom("stats", "dbinom", "optimize", "pbeta", "pf", "pnorm", "qnorm", "qf", "update", "var")
 
 export(CDF.Pval, CDF.Pval.HA, cCDF.SoM, cCDF.ToJ, controlFDF, detail, dists, gentempfilenm,
        logit, logitInv, pwrFDR, var.J.o.rtm, var.rtm.SoM, var.rtm.ToJ, "%,%", "%over%")
 
 S3method(print, pwr)
 S3method(print, vvv)
+S3method(print, cdf)
 S3method(`+`, pwr)
 S3method(`-`, pwr)
 S3method(`*`, pwr)

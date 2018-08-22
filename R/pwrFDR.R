@@ -22,8 +22,9 @@
                         qdist=function(x, par) qf(x, ncp=par[2], df1=par[3], df2=par[4]))))
 
 "pwrFDR" <-
-function(groups=2, effect.size, n.sample, r.1, FDR, N.tests, average.power, L.power, lambda,
-         method=c("approximate","simulation", "JL", "Iz"), control=list(version=0, tol=1e-8, max.iter=1000, distopt=1, CS=list(NULL)),
+function(groups=2, effect.size, n.sample, r.1, FDR, use.LFD=FALSE, N.tests, average.power, L.power, lambda,
+         method=c("approximate","simulation", "JL", "Iz"), control=list(version=0, tol=1e-8, max.iter=1000,
+                                                               distopt=1, CS=list(NULL), verb=FALSE),
          n.sim=1000, temp.file)
 {
     .call. <- m <- match.call()
@@ -69,7 +70,7 @@ function(groups=2, effect.size, n.sample, r.1, FDR, N.tests, average.power, L.po
     }
     if(!missing(lambda)) lambda <- m$lambda <- eval(m$lambda, sys.parent())
     if(missing(method)) method <-"Iz"
-    if(missing(control)) m$control <- list(version=0, tol=1e-8, max.iter=1000, distopt=1, CS=list(NULL))
+    if(missing(control)) m$control <- list(version=0, tol=1e-8, max.iter=1000, distopt=1, CS=list(NULL), verb=FALSE)
     if(!missing(control))
     {
       if(!is.list(control)) stop("Argument 'control' must be a list")
@@ -78,6 +79,7 @@ function(groups=2, effect.size, n.sample, r.1, FDR, N.tests, average.power, L.po
       if(is.null(control$max.iter)) control$max.iter <- 1000
       if(is.null(control$distopt)) control$distopt <- 1
       if(is.null(control$CS)) control$CS <- list(NULL)
+      if(is.null(control$verb)) control$verb <- FALSE
       m$control <- control
     }
     nch.mthd <- nchar(method)
@@ -104,11 +106,30 @@ function(groups=2, effect.size, n.sample, r.1, FDR, N.tests, average.power, L.po
     m$method <- m$temp.file <- NULL 
     if(long.method!="simulation") m$n.sim <- NULL
 #    if(long.method %in% c("JL", "Iz")) m$N.tests <- NULL
+    m.sv <- m
     m[[1]] <- as.name(pwrFDR.fnc.nm)
+    m$use.LFD <- NULL
     ans <- suppressWarnings(eval(m))
-
     ans$call <- .call.
     class(ans) <- "pwr"
+    if(!missing(use.LFD))
+    {
+      m.fstr <- m.sv
+      m.fstr[[1]] <- as.name("controlFDF")
+      m.fstr$use.prob <- "f"
+      m.fstr$average.power <- m.fstr$L.power <- m.fstr$lambda <- m.fstr$method <- m.fstr$control <-
+          m.fstr$n.sim <- m.fstr$temp.file <- m.fstr$use.LFD <- NULL
+        
+      if(no.n.sample) m.fstr$n.sample <- ans$n.sample
+      f.star <- eval(m.fstr)$f.star
+      ans$call$use.LFD <- NULL
+      f.orig <- eval(ans$call$FDR)
+      ans$call$FDR <- f.star
+      ans <- update(ans)
+      ans$call$FDR <- f.orig
+      ans$call$use.LFD <- TRUE
+      ans$FDR.star <- f.star
+    }
     ans
 }
 
@@ -430,6 +451,7 @@ function (groups, effect.size, n.sample, r.1, FDR, N.tests, control)
 function (groups, effect.size, n.sample, r.1, FDR, N.tests, control, lambda, n.sim=1000)
 {
     .call. <- match.call()
+    verb <- control$verb
     idistopt <- control$distopt    
     pars0 <- eval(dists$pars0[[1+idistopt]])
     pars1 <- eval(dists$pars1[[1+idistopt]])
@@ -441,6 +463,11 @@ function (groups, effect.size, n.sample, r.1, FDR, N.tests, control, lambda, n.s
     is.CS <- !is.null(control$CS[[1]])
     if(!is.CS)
     {
+      if(verb)
+      {
+        cat(sprintf("nsim=%d, FDR=%g, N.tests=%d, r.1=%g, n.sample=%d, effect.size=%g\n",
+                    nsim, FDR, N.tests, r.1, n.sample, effect.size))
+      }
       rslt <- .C("pwrFDRsim",
                  nsim    = as.integer(nsim),
                  FDR     = as.double(FDR),
@@ -450,6 +477,7 @@ function (groups, effect.size, n.sample, r.1, FDR, N.tests, control, lambda, n.s
                  theta   = as.double(effect.size),
                  distopt = as.integer(control$distopt),
                  groups  = as.double(groups),
+                 verb    = as.integer(verb),
                  M1      = integer(nsim),
                  J       = integer(nsim),
                  S       = integer(nsim),
@@ -472,6 +500,11 @@ function (groups, effect.size, n.sample, r.1, FDR, N.tests, control, lambda, n.s
                      "and 'n.WC' divides 'N.tests' evenly")
         # cat(sprintf("is.CS=%d, rho=%g, n.WC=%d\n",is.CS, rho,n.WC))
       }
+      if(verb)
+      {
+        cat(sprintf("nsim=%d, FDR=%g, N.tests=%d, r.1=%g, n.sample=%d, effect.size=%g, rho=%g, n.WC=%d\n",
+                    nsim, FDR, N.tests, r.1, n.sample, effect.size, rho, n.WC))
+      }
       rslt <- .C("pwrFDRsimCS",
                  nsim    = as.integer(nsim),
                  FDR     = as.double(FDR),
@@ -481,6 +514,7 @@ function (groups, effect.size, n.sample, r.1, FDR, N.tests, control, lambda, n.s
                  theta   = as.double(effect.size),
                  rho     = as.double(rho),
                  n.WC    = as.integer(n.WC),
+                 pverb   = as.integer(verb),
                  M1      = integer(nsim),
                  J       = integer(nsim),
                  S       = integer(nsim),
@@ -548,8 +582,9 @@ function(u, groups=2, r.1, effect.size, n.sample, control)
   is.pos <- (dists$minv[[1+idistopt]]==0)
   c.g <- qdist(1-u/2^(!is.pos), pars0)
   ans <- (1-r.1)*u + r.1*(1-pdist(c.g, pars1) + (!is.pos)*pdist(-c.g, pars1))
-  out <- list(u=u, CDF.Pval=ans, call=.call.)
-  class(out) <- "vvv"
+  df <- as.data.frame(list(u=u, CDF.Pval=ans))
+  out <- list(CDF.Pval=df, call=.call.)
+  class(out) <- "cdf"
   out
 }
 
@@ -572,8 +607,9 @@ function (u, groups=2, r.1, effect.size, n.sample, control)
   is.pos <- (dists$minv[[1+idistopt]]==0)
   c.g <- qdist(1-u/2^(!is.pos), pars0)
   ans <- 1-pdist(c.g, pars1) + (!is.pos)*pdist(-c.g, pars1)
-  out <- list(u=u, CDF.Pval.HA=ans, call=.call.)
-  class(out) <- "vvv"
+  df <- as.data.frame(list(u=u, CDF.Pval.HA=ans))
+  out <- list(CDF.Pval.HA=df, call=.call.)
+  class(out) <- "cdf"
   out  
 }
 
@@ -1016,45 +1052,63 @@ function(x=NULL, groups=2, effect.size, n.sample, r.1, FDR, N.tests, control)
 # 3. find f* such that:  (1-r)f = (1-r)f* + (v(f*)/m)^0.5 qnorm(1-(1-r)f*)
 
 "controlFDF" <-
-function(groups=2, FDR, r.1, N.tests, effect.size, n.sample, use.prob=c("f*","f","user"), prob=NULL)
+function (groups = 2, FDR, r.1, N.tests, effect.size, n.sample, 
+    use.prob = c("f*", "f", "user"), prob = NULL) 
 {
-  .call. <- match.call()
-  if(missing(use.prob)) use.prob <- "f*"
-  if(missing(prob)) prob <- 0
-  bad <- FALSE
-  if(!missing(use.prob)) if(!(use.prob %in% c("f*","f","user"))) bad <- TRUE
-  if(!bad) if(use.prob=="user") if(missing(prob)) bad <- TRUE
-  if(!bad) if(use.prob=="user" && (prob <= 0 || prob >= 1)) bad <- TRUE
-  if(bad) stop("If argument 'use.prob' is set to 'user' then argument 'prob' must " %,%
-               "be set to a numeric between 0 and 1")
-  OBJ <-
-  function(x, groups, FDR, r.1, N.tests, effect.size, n.sample, use.prob, prob)
-  {
-    f.star <- logitInv(x)
-    if(use.prob=="f*") prob <- f.star
-    if(use.prob=="f") prob <- FDR
-    pwr <- pwrFDR(groups=groups, effect.size=effect.size, n.sample=n.sample, r.1=r.1, FDR=f.star)
+    .call. <- match.call()
+    if (missing(use.prob)) 
+        use.prob <- "f*"
+    if (missing(prob)) 
+        prob <- 0
+    bad <- FALSE
+    if (!missing(use.prob)) 
+        if (!(use.prob %in% c("f*", "f", "user"))) 
+            bad <- TRUE
+    if (!bad) 
+        if (use.prob == "user") 
+            if (missing(prob)) 
+                bad <- TRUE
+    if (!bad) 
+        if (use.prob == "user" && (prob <= 0 || prob >= 1)) 
+            bad <- TRUE
+    if (bad) 
+        stop("If argument 'use.prob' is set to 'user' then argument 'prob' must " %,% 
+            "be set to a numeric between 0 and 1")
+    OBJ <- function(x, groups, FDR, r.1, N.tests, effect.size, 
+        n.sample, use.prob, prob) {
+        f.star <- logitInv(x)
+        if (use.prob == "f*") 
+            prob <- f.star
+        if (use.prob == "f") 
+            prob <- FDR
+        pwr <- pwrFDR(groups = groups, effect.size = effect.size, 
+            n.sample = n.sample, r.1 = r.1, FDR = f.star)
+        v <- var.rtm.ToJ(pwr)$var
+        (((1 - r.1) * FDR - ((1 - r.1) * f.star + (v/N.tests)^0.5 * 
+            qnorm(1 - (1 - r.1) * prob)))^2)^(1/1.25)
+    }
+    rslt <- optimize(f = OBJ, lower = -8, upper = 8, groups = groups, 
+                     FDR = FDR, r.1 = r.1, N.tests = N.tests, effect.size = effect.size, 
+                     n.sample = n.sample, use.prob = use.prob, prob = prob)
+    f.star <- logitInv(rslt$min)
+    if (use.prob == "f*") 
+        prob <- f.star
+    if (use.prob == "f") 
+        prob <- FDR
+    pwr <- pwrFDR(groups = groups, effect.size = effect.size, 
+        n.sample = n.sample, r.1 = r.1, FDR = f.star)
     v <- var.rtm.ToJ(pwr)$var
-    ( ( (1-r.1)*FDR - ((1-r.1)*f.star + (v/N.tests)^0.5 * qnorm(1 -(1-r.1)*prob))  )^2 )/1.25
-  }
-  
-  rslt <- 
-      optimize(f=OBJ, lower=-8, upper=8, groups=groups, FDR=FDR, r.1=r.1, N.tests=N.tests, effect.size=effect.size,
-               n.sample=n.sample, use.prob=use.prob, prob=prob)
-  f.star <- logitInv(rslt$min)
-  if(use.prob=="f*") prob <- f.star
-  if(use.prob=="f") prob <- FDR
-  pwr <- pwrFDR(groups=groups, effect.size=effect.size, n.sample=n.sample, r.1=r.1, FDR=f.star)
-  v <- var.rtm.ToJ(pwr)$var 
-  lambda.star <- ((1-r.1)*f.star + (v/N.tests)^0.5 * qnorm(1 -(1-r.1)*prob))
-  prob.star <- 1-pnorm(N.tests^0.5*(lambda.star - (1-r.1)*f.star)/v^0.5)
-  obj <- rslt$objective
-  
-  out <- as.data.frame(list(f.star=f.star, obj=obj, L.star=lambda.star, P.star=prob.star))
-  out <- c(out, pwr)
-  out$call <- .call.
-  class(out) <- "vvv"
-  out
+    lambda.star <- ((1 - r.1) * f.star + (v/N.tests)^0.5 * qnorm(1 - 
+        (1 - r.1) * prob))
+    prob.star <- 1 - pnorm(N.tests^0.5 * (lambda.star - (1 - 
+        r.1) * f.star)/v^0.5)
+    obj <- rslt$objective
+    out <- as.data.frame(list(f.star = f.star, obj = obj, L.star = lambda.star, 
+        P.star = prob.star))
+    out <- c(out, pwr)
+    out$call <- .call.
+    class(out) <- "vvv"
+    out
 }
 
 "cCDF.SoM" <-
@@ -1187,11 +1241,12 @@ function(lambda, x=NULL, groups, effect.size, n.sample, r.1, FDR, N.tests, contr
   }
   m <- N.tests
   ans <- 1-pnorm(m^0.5*(lambda - pi.1)/sgma)
+  df <- as.data.frame(list(lambda=lambda, cCDF.SoM=ans))
   pwrrslt$call <- NULL 
-  out <- c(cCDF.SoM=ans, unclass(pwrrslt))
+  out <- c(cCDF.SoM=df, unclass(pwrrslt))
   out$call <- .call.
 
-  class(out) <- "vvv"
+  class(out) <- "cdf"
   out
 }
 
@@ -1330,11 +1385,14 @@ function(lambda, x=NULL, groups, effect.size, n.sample, r.1, FDR, N.tests, contr
   pwrrslt$call <- NULL 
   pwrrslt <- unclass(pwrrslt)
   pwrrslt$sigma.rtm.SoM <- pwrrslt$L.power <- pwrrslt$L.eq <- NULL
-  out <- c(cCDF.ToJ=ans, unclass(pwrrslt))
+
+  df <- as.data.frame(list(lambda=lambda, cCDF.ToJ=ans))
+  
+  out <- c(cCDF.ToJ=df, unclass(pwrrslt))
   out$sigma.rtm.ToJ <- sgma
   outcall <- .call.
 
-  class(out) <- "vvv"
+  class(out) <- "cdf"
   out
 }
 
@@ -1402,6 +1460,18 @@ function (x, ...)
     dimnames(x)[[1]] <- " "
     print(x)
     invisible(x)
+}
+
+"print.cdf" <-
+function(x, ...)
+{
+    y <- x
+    cat("Call:\n")
+    print(x$call)
+    class(x) <- NULL
+    x$call <- NULL
+    print(x[[1]])
+    invisible(x)    
 }
 
 "is.int" <-

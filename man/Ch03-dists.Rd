@@ -52,28 +52,29 @@
    The instance shipped with the current version of the package was created using
    the following commands. Read this and you'll figure out how to add a distribution
    type yourself.
-
-"dists" <-
-  as.data.frame(rbind(c( ### Normal with 2 groups
-                        pars0=as.call(expression(c,0,ncp=0,                            sd=1)),
-                        pars1=as.call(expression(c,0,ncp=(n.sample/2)^0.5*effect.size, sd=1)),
-                        minv=-Inf, 
-                        ddist=function(x, par) dnorm(x, mean=par[2], sd=par[3]),
-                        pdist=function(x, par) pnorm(x, mean=par[2], sd=par[3]),
-                        qdist=function(x, par) qnorm(x, mean=par[2], sd=par[3])), 
-                      c( ### t with 2 groups
-                        pars0=as.call(expression(c,1,ncp=0,                            ndf=2*n.sample - 2)),
-                        pars1=as.call(expression(c,1,ncp=(n.sample/2)^0.5*effect.size, ndf=2*n.sample - 2)),
-                        minv=-Inf, 
-                        ddist=function(x, par) dt(x, ncp=par[2], df=par[3]),
-                        pdist=function(x, par) pt(x, ncp=par[2], df=par[3]),
-                        qdist=function(x, par) qt(x, ncp=par[2], df=par[3])), 
-                      c(### F with 'groups' groups, effect.size=theta*c(0, 0.5, 0.5, ..., 0.5, 1)
-                        pars0=as.call(expression(c,2,ncp=0,                        ndf1=groups-1, ndf2=groups*(n.sample-1))),
-                        pars1=as.call(expression(c,2,ncp=n.sample*effect.size^2/2, ndf1=groups-1, ndf2=groups*(n.sample-1))),
-                        minv=0,
-                        ddist=function(x, par) df(x, ncp=par[2], df1=par[3], df2=par[4]),
-                        pdist=function(x, par) pf(x, ncp=par[2], df1=par[3], df2=par[4]),
+\cr
+"dists" <-\cr
+as.data.frame(rbind(\cr
+                    \verb{### Normal with 2 groups ###}\cr
+                      c(pars0=as.call(expression(c,0,ncp=0,sd=1)),\cr
+			pars1=as.call(expression(c,0,ncp=(n.sample/2)^0.5*effect.size, sd=1)),\cr
+                        minv=-Inf,\cr
+                        ddist=function(x, par) dnorm(x, mean=par[2], sd=par[3]),\cr
+                        pdist=function(x, par) pnorm(x, mean=par[2], sd=par[3]),\cr
+                        qdist=function(x, par) qnorm(x, mean=par[2], sd=par[3])),\cr\cr
+		      \verb{### t with 2 groups ###}\cr
+                      c(pars0=as.call(expression(c,1,ncp=0, ndf=2*n.sample - 2)),\cr
+                        pars1=as.call(expression(c,1,ncp=(n.sample/2)^0.5*effect.size, ndf=2*n.sample - 2)),\cr
+                        minv=-Inf,\cr
+                        ddist=function(x, par) dt(x, ncp=par[2], df=par[3]),\cr
+                        pdist=function(x, par) pt(x, ncp=par[2], df=par[3]),\cr
+                        qdist=function(x, par) qt(x, ncp=par[2], df=par[3])),\cr\cr
+		      \verb{### F with 'groups' groups, effect.size=theta*c(0, 0.5, 0.5, ..., 0.5, 1) ###}\cr
+                      c(pars0=as.call(expression(c,2,ncp=0, ndf1=groups-1, ndf2=groups*(n.sample-1))),\cr
+                        pars1=as.call(expression(c,2,ncp=n.sample*effect.size^2/2, ndf1=groups-1, ndf2=groups*(n.sample-1))),\cr
+                        minv=0,\cr
+                        ddist=function(x, par) df(x, ncp=par[2], df1=par[3], df2=par[4]),\cr
+                        pdist=function(x, par) pf(x, ncp=par[2], df1=par[3], df2=par[4]),\cr
                         qdist=function(x, par) qf(x, ncp=par[2], df1=par[3], df2=par[4]))))
 }
 \source{

@@ -14,12 +14,17 @@ typedef struct{
 int cmprXPH(const void *, const void *);
 
 void pwrFDRsimCS(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, double *ptheta,
-		 double *prho, int *pnWC, int *pM, int *pJ, int *pS, double *pX_i, int *pM_i)
+		 double *prho, int *pnWC, int *pverb, int *pM, int *pJ, int *pS, double *pX_i, 
+                 int *pM_i)
 {
-    int nsim=*pnsim, Ng=*pNg, nWC=*pnWC, m1, ii, j, J_, cS_, n, done, h, k, nC;
-    double r1, xN, xnsim, xM1, X_j, FDR=*pFDR, *fdrcrit, theta=*ptheta, rtnth, U, xdf, Z;
-    double abs_rho=fabs(*prho), sgn_rho=sign(*prho), tau, sig;
+    int nsim=*pnsim, Ng=*pNg, nWC=*pnWC, m1, ii, j, J_, cS_, n, done, h, k, nC, verb;
+    double r1, xN, xnsim, xM1, X_j, FDR=*pFDR, *fdrcrit, theta=*ptheta, rtnth, U, xdf, W, Z;
+    double abs_rho, sgn_rho, tau, sig, xn;
     XPHindxd *pXPH;
+
+    verb=*pverb;
+    abs_rho=fabs(*prho);
+    sgn_rho=sign(*prho);
 
     fdrcrit = (double *)Calloc(Ng, double);
     pXPH = (XPHindxd *)Calloc(Ng, XPHindxd);
@@ -29,11 +34,13 @@ void pwrFDRsimCS(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, doubl
     xnsim = (double)nsim;
     r1 = *pr1;
     n = *pn;
+    xn = (double)n;
     nC = Ng/nWC;
-    rtnth = pow(n, 0.5)*theta;
+    rtnth = pow(xn/2.0, 0.5)*theta;
     xdf = (double) 2*n - 2;
     tau = pow(abs_rho, 0.5);
     sig = pow(1.0-abs_rho, 0.5);
+    if(verb) Rprintf("sig=%g, tau=%g\n", sig, tau);
     // qnorm5(double p, double mu, double sigma, int lower_tail, int log_p)
     // pnorm5(double x, double mu, double sigma, int lower_tail, int log_p)
 
@@ -48,13 +55,15 @@ void pwrFDRsimCS(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, doubl
       {
 	/* simulate the Z for this cluster */
 	U = unif_rand();
-	Z = qnorm5(U, 0.0, tau, 0, 0);
+	Z = sgn_rho*qnorm5(U, 0.0, tau, 0, 0);
         for(k=0;k<nWC;k++)
         {
 	  j = nWC*h + k;
 	  (pXPH+j)->index = (j+1);
 	  U = unif_rand();
-	  X_j = qnorm5(U, 0.0, sig, 0, 0) + Z;
+          W = qnorm(U, 0.0, sig, 0, 0);
+          if(verb) Rprintf("ii=%d, j=%d, W=%g, Z=%g\n", ii, j, W, Z);
+	  X_j = W + Z;
 	  if(j < m1) X_j = X_j + rtnth;
           if(ii==0) *(pX_i + j) = X_j;
 

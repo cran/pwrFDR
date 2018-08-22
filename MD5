@@ -1,9 +1,9 @@
-04e44c07174913be1a25cd51c3d6eb36 *DESCRIPTION
-bee717f51bdd2b738e16b9891319c2c8 *NAMESPACE
-eb76555aa9bd20da2893c0ad895e9789 *R/pwrFDR.R
-298af2a9c2142e8f05afe04b122ccd61 *man/Ch01-pwrFDR.Rd
+5b1acbef68505b589cd02d8b0d5c7eb4 *DESCRIPTION
+2760e0877c1cab56b4f956987a95492f *NAMESPACE
+6118cd65803bb3585664d641fbbc3cb0 *R/pwrFDR.R
+e839ba1c7406fc71bf33dbefef5adaf2 *man/Ch01-pwrFDR.Rd
 0af6852cfebd9dd9f323586e79c19f30 *man/Ch02-controlFDF.Rd
-f09b620cf7002eca014c5f79e38865d8 *man/Ch03-dists.Rd
+0ec179efb45eb92676301a18c478aeb9 *man/Ch03-dists.Rd
 0c8c244f3be22453dc819d8ea55f99a7 *man/Ch04-detail.Rd
 eef1f44de6a878483da176e042207cd6 *man/Ch05-cCDF.SoM.Rd
 84852243b0ec54c25a2cec6bfbe53ad3 *man/Ch06-cCDF.ToJ.Rd
@@ -17,6 +17,6 @@ b83a16cb3d4aaff1f16266f225ee4d18 *man/Ch08-CDF.Pval.HA.Rd
 4e21bbc8a41b62ba4bc8f898c348b28e *man/Ch14-over.Rd
 b5c9d47cbd15127a23d75ac3fca494d0 *man/Ch15-concat.Rd
 cf814d62320ba663b0b3dfa839fcb453 *man/Ch16-gentempfilenm.Rd
-9b2b1193b538e17895491d54685d4b35 *src/pwrFDRsim.c
-7db14d8ddc4a9e34a5887519a701a3d4 *src/pwrFDRsimCS.c
+136f8ee2117cad28b2489e2633a92ca9 *src/pwrFDRsim.c
+ba0f6e4f0aa1cfaa81165cc774c85941 *src/pwrFDRsimCS.c
 d50944ab50300ec4e6f206814841d681 *src/registerDynamicSymbol.c
