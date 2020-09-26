@@ -7,17 +7,12 @@
   Computes the CDF of p-values for test statistics distribted under HA.
 }
 \usage{
-  CDF.Pval.HA(u, groups = 2, r.1, effect.size, n.sample, control)
+CDF.Pval.HA(u, effect.size, n.sample, r.1, groups = 2, type="balanced",
+            grpj.per.grp1=1, control)
 }
 \arguments{
   \item{u}{
     Argument of the CDF. Result will be Pr( P_i <= u )
-  }
-  \item{groups}{
-    The number of experimental groups to compare. Default value is 2.
-  }
-  \item{r.1}{
-    The proportion of all test statistics that are distributed under HA.
   }
   \item{effect.size}{
     The effect size (mean over standard deviation) for test statistics 
@@ -27,24 +22,35 @@
   \item{n.sample}{
     The number of experimental replicates.
   }
+  \item{r.1}{
+    The proportion of all test statistics that are distributed under HA.
+  }
+  \item{groups}{
+    The number of experimental groups to compare. Default value is 2.
+  }
+  \item{type}{
+    A character string specifying, in the groups=2 case, whether the
+    test is 'paired', 'balanced', or 'unbalanced' and in the case when
+    groups >=3, whether the test is 'balanced' or 'unbalanced'. The
+    default in all cases is 'balanced'. Left unspecified in the one
+    sample (groups=1) case. 
+  }
+  \item{grpj.per.grp1}{
+    Required when \code{type}="unbalanced", specifies the group 0 to
+    group 1 ratio in the two group case, and in the case of 3 or more
+    groups, the group j to group 1 ratio, where group 1 is the group
+    with the largest effect under the alternative hypothesis. 
+  }
   \item{control}{
     Optionally, a list with components with the following components:
     'groups', used when distop=3 (F-dist), specifying number of groups. 
-    'version', used only in the 'JL' method, choice 0 gives the 'JL'
-    version as published, whereas choice 1 replaces the FDR with
-    r.0*FDR resulting in the infinite simultaneous tests limiting
-    average power, which is the 'Iz' version, but this is redundant
-    because you can specify the 'Iz' method to use this option.
     'tol' is a convergence criterion used in iterative methods
     which is set to 1e-8 by default
-    'max.iter' is an iteration limit, set to 1000 by default
+    'max.iter' is an iteration limit, set to 20 for function iteration
+     and 1000 for all others by default
     'distop', specifying the distribution family of the central and
       non-centrally located sub-populations. =1 gives normal (2 groups)
       =2 gives t- (2 groups) and =3 gives F- (2+ groups)    
-    'CS', correlation structure, for use only with 'method="simulation"'
-      which will simulate m simulatenous tests with correlations 'rho'
-      in blocks of size 'n.WC'. Specify as list
-      CS = list(rho=0.80, n.WC=50) for example
   }
 }
 \details{
@@ -58,14 +64,14 @@
   The limiting true positive fraction is the infinite simultaneous tests
   average power,
 
-  lim_m S_m/M_m = average.power (a.s.),
+  lim_m T_m/M_m = average.power (a.s.),
 
   which is used to approximate the average power for finite 'm', is
-  G_1 at gamma f:
+  G_1 at gamma alpha:
 
-  G_1( gamma f) = average.pwer
+  G_1( gamma alpha) = average.pwer
 
-  where f is the FDR and gamma = lim_m J_m/m (a.s.) is the limiting
+  where alpha is the nominal FDR and gamma = lim_m R_m/m (a.s.) is the limiting
   positive call fraction.
 }
 \value{
@@ -75,12 +81,17 @@
   \item{CDF.Pval.HA}{The value of the CDF}
 }
 \references{
-  Genovese, C. and L. Wasserman. (2004) A stochastic process approach to
-  false discovery control. Annals of Statistics. 32 (3), 1035-1061.
-
+  Izmirlian G. (2020) Strong consistency and asymptotic normality for
+    quantities related to the Benjamini-Hochberg false discovery rate
+    procedure. Statistics and Probability Letters; 108713,
+    <doi:10.1016/j.spl.2020.108713>.  
+  
   Izmirlian G. (2017) Average Power and \eqn{\lambda}-power in
     Multiple Testing Scenarios when the Benjamini-Hochberg False
-    Discovery Rate Procedure is Used. arXiv:1801.03989
+    Discovery Rate Procedure is Used. <arXiv:1801.03989>
+    
+  Genovese, C. and L. Wasserman. (2004) A stochastic process approach to
+   false discovery control. Annals of Statistics. 32 (3), 1035-1061.
 }
 \author{
   Grant Izmirlian <izmirlian at nih dot gov>
@@ -90,16 +101,16 @@
 }
 \examples{
   ## First calculate an average power for a given set of parameters
-  rslt.avgp <- pwrFDR(effect.size=0.79, n.sample=46, r.1=2000/54675, FDR=0.15)
+  rslt.avgp <- pwrFDR(effect.size=0.79, n.sample=42, r.1=0.05, alpha=0.15)
 
   ## Now verify that G_A( gamma f ) = average.power
 
-  gamma <- rslt.avgp$gamma
-  f <- rslt.avgp$call$FDR
+  gma <- rslt.avgp$gamma
+  alpha <- rslt.avgp$call$alpha
 
-  GA.gma.f <- CDF.Pval.HA(u=gamma*f, r.1=2000/54675, effect.size=0.79, n.sample=46)
+  GA.gma.alpha <- CDF.Pval.HA(u=gma*alpha, r.1=0.05, effect.size=0.79, n.sample=42)
 
-  c(G.A.of.gamma.f=GA.gma.f$CDF.Pval.HA, average.power=rslt.avgp$average.power)
+  c(G.gm.alpha=GA.gma.alpha$CDF.Pval.HA$CDF.Pval.HA, average.power=rslt.avgp$average.power)
 }
 \keyword{FDR}
 \keyword{Benjamini}

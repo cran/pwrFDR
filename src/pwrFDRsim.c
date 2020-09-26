@@ -17,7 +17,7 @@ typedef struct{
 
 double pdist(double x, distpars *par)
 {
-  double xncp, sig, xdf1, xdf2, ans;
+  double xncp, sig, xdf1, xdf2, ans=0.0;
   if(par->opt == 0)                                         
   {
     xncp=par->p1;
@@ -44,7 +44,7 @@ double pdist(double x, distpars *par)
 
 double qdist(double x, distpars *par)
 {
-  double xncp, sig, xdf1, xdf2, ans;
+  double xncp, sig, xdf1, xdf2, ans=0.0;
   if(par->opt == 0)                                         
   {
     xncp=par->p1;
@@ -78,28 +78,30 @@ double qdist(double x, distpars *par)
 
 int cmprXPH(const void *, const void *);
 
-void pwrFDRsim(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, double *ptheta,
-	       int *pdistopt, double *pgroups, int *pverb, int *pM, int *pJ, int *pS, 
+void pwrFDRsim(int *pnsim, double *pFDR, int *pcntlFDF, int *pRomano, double *pFDRst,
+	       int *pm, double *pr1, int *pn, double *ptheta, int *pdistopt, double *pgroups, double *pdelta,
+	       int *pverb, int *pM, int *pR, int *pT, int *pRst, int *pTst, double *pp0ht, int *pRR, int *pTR,
 	       double *pX_i, int *pM_i)
 {
-    int nsim=*pnsim, Ng=*pNg, m1, ii, j, J_, cS_, n=*pn, done, idistopt=*pdistopt;
-    double r1=*pr1, xN, xnsim, xn, xgroups=*pgroups, TWO, xM1, X_j, FDR=*pFDR, *fdrcrit, theta=*ptheta, rtnth, U, xncp;
+    int nsim=*pnsim, m=*pm, icntlFDF=*pcntlFDF, iRomano=*pRomano, M_i, ii, j, R_, Rst_, cT_;
+    int cTst_, n=*pn, done, verb=*pverb, idistopt=*pdistopt;
+    double r1=*pr1, r0ht, xm, xn, xgroups=*pgroups, TWO, X_j, FDR=*pFDR, FDRst=*pFDRst;
+    double smIpvlgthlf, theta=*ptheta, U, xncp=0.0, v, pv;
+    double bhfdrcrit, rmnocrit, delta=*pdelta;
     XPHindxd *pXPH;
     distpars *par0, *par1;
 
     par0 = (distpars *) Calloc(1, distpars);
     par1 = (distpars *) Calloc(1, distpars);
-    fdrcrit = (double *)Calloc(Ng, double);
-    pXPH = (XPHindxd *)Calloc(Ng, XPHindxd);
+    pXPH = (XPHindxd *)Calloc(m, XPHindxd);
 
     GetRNGstate();
-    xN = (double)Ng;
-    xnsim = (double)nsim;
+    xm = (double)m;
     xn = (double)n;
     
     par0->opt  = par1->opt  = idistopt;
-    /* Rprintf("nsim: %d, FDR: %g, Ng: %d, r1: %g, n: %d, theta: %g, distopt: %d, groups: %g\n",
-               *pnsim, *pFDR, *pNg, *pr1, *pn, *ptheta, *pdistopt, *pgroups); */
+    /* Rprintf("nsim: %d, FDR: %g, m: %d, r1: %g, n: %d, theta: %g, distopt: %d, groups: %g\n",
+               *pnsim, *pFDR, *pm, *pr1, *pn, *ptheta, *pdistopt, *pgroups); */
     if(idistopt==0)
     {
       xncp = pow(xn/2.0, 0.5)*theta;
@@ -130,20 +132,17 @@ void pwrFDRsim(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, double 
 	    xncp, par0->opt, par0->p1, par0->p2,  par1->opt, par1->p1, par1->p2);
        Rprintf("U: %g, X_j: %g\n", U, X_j); */
     
-    for(j=0;j<Ng;j++) *(fdrcrit + j) = FDR*((double)(j+1))/xN;
-
     TWO = 2.0;
     if(idistopt==2) TWO = 1.0;
     
     for(ii=0;ii<nsim;ii++)
     {
-      *(pM+ii) = m1 = (int) rbinom(xN, r1);
-      xM1 = (double) m1;
-      if(ii==0) *pM_i = m1;
-      for(j=0;j<Ng;j++)
+      *(pM+ii) = M_i = (int) rbinom(xm, r1);
+      if(ii==0) *pM_i = M_i;
+      for(j=0;j<m;j++)
       {
         par0->p1 = par1->p1 = 0.0;
-        if(j < m1) par1->p1 = xncp;
+        if(j < M_i) par1->p1 = xncp;
 
         U = unif_rand();
 	X_j = qdist(U, par1);
@@ -153,32 +152,86 @@ void pwrFDRsim(int *pnsim, double *pFDR, int *pNg, double *pr1, int *pn, double 
         (pXPH+j)->index = (j+1);
         (pXPH+j)->X = X_j;
         (pXPH+j)->pval = TWO*(1.0 - pdist(fabs(X_j), par0));
-        (pXPH+j)->HA = ((j+1)<=m1);
+        (pXPH+j)->HA = ((j+1)<=M_i);
       }
-      qsort(pXPH, Ng, sizeof(XPHindxd), &cmprXPH);
+      qsort(pXPH, m, sizeof(XPHindxd), &cmprXPH);
       
-      J_=0;
-      cS_=0;
+      R_=0;
+      cT_=0;
       done=0;
       j=0;
-      while(!done && j < Ng)
+      while(!done && j < m)
       {
-	if((pXPH+Ng-j-1)->pval < (*(fdrcrit + Ng-j-1)))
+	pv = (pXPH+m-j-1)->pval;
+	bhfdrcrit = (FDR*((double)(m-j))/xm);
+        /* Rprintf("ii=%d, j=%d, pval=%f, crit=%f\n", ii, j, pv, bhfdrcrit); */
+	if(pv <= bhfdrcrit)
 	{
-	  J_ = Ng - j;
+	  R_ = m - j;
 	  done = 1;
 	}
 	j++;
       }
-      for(j=0;j<J_;j++) cS_+= (pXPH+j)->HA;
-      *(pJ + ii) = J_;
-      *(pS + ii) = cS_;
+      for(j=0;j<R_;j++) cT_ += (pXPH+j)->HA;
+      *(pR + ii) = R_;
+      *(pT + ii) = cT_;
+      /*      Rprintf("R=%d, S=%d\n", R_, cT_);*/
+
+      if(icntlFDF>=1)
+      {
+        Rst_=0;
+        cTst_=0;
+        done=0;
+	j=0;
+	while(!done && j < m)
+        {
+          pv = (pXPH+m-j-1)->pval;
+	  bhfdrcrit = (FDRst*((double)(m-j))/xm);
+	  if(pv <= bhfdrcrit)
+	  {
+	    Rst_ = m - j;
+	    done = 1;
+	  }
+	  j++;
+	}
+        for(j=0;j<Rst_;j++) cTst_ += (pXPH+j)->HA;
+        *(pRst + ii) = Rst_;
+        *(pTst + ii) = cTst_;
+      }
+      if(icntlFDF==2)
+      {
+	smIpvlgthlf=0.0;
+        for(j=0;j<m;j++) smIpvlgthlf+= ((double) (1*((pXPH+j)->pval > 0.5)));
+	r0ht = 2.0*smIpvlgthlf/xm;
+	*(pp0ht + ii) = r0ht;
+      }
+      if(iRomano)
+      {
+        R_=0;
+        cT_=0;
+        done=0;
+	j=0;
+	while(!done && j < m)
+        {
+          pv = (pXPH+j)->pval;
+	  rmnocrit = (floor(delta*j) + 1)*FDR/(m + floor(delta*j) + 1 - j);
+	  if(pv > rmnocrit)
+	  {
+	    R_ = j;
+	    done = 1;
+	  }
+	  j++;
+	}
+        for(j=0;j<R_;j++) cT_ += (pXPH+j)->HA;
+        *(pRR + ii) = R_;
+        *(pTR + ii) = cT_;
+      }
     }
 
     PutRNGstate();
-
+    Free(par0);
+    Free(par1);
     Free(pXPH);
-    Free(fdrcrit);
 }
 
 int cmprXPH(const void *x, const void *y)
