@@ -41,33 +41,38 @@ double pdist(double x, distpars *par)
   }
   return(ans);
 }
+// double rnorm(double mu, double sigma)
+// double rchisq(double df)
+// double rnchisq(double df, double lambda)
 
-double qdist(double x, distpars *par)
+
+double rdist(distpars *par)
 {
   double xncp, sig, xdf1, xdf2, ans=0.0;
   if(par->opt == 0)                                         
   {
     xncp=par->p1;
     sig=par->p2;
-    ans=qnorm5(x, xncp, sig, 0, 0);
+    ans=rnorm(xncp, sig);
   }                                                         
   if(par->opt == 1)
   {                                                         
     xncp=par->p1;
     xdf1=par->p2;
-    if(fabs(xncp)>1e-6) ans=qnt(x,xdf1,xncp,1,0);
-    if(fabs(xncp)<=1e-6) ans=qt(x,xdf1,1,0);
+    if(fabs(xncp)>1e-6) ans=rnorm(xncp, 1.0)/pow(rchisq(xdf1)/xdf1, 0.5);
+    if(fabs(xncp)<=1e-6) ans=rt(xdf1);
   }
   if(par->opt == 2)
   {                                                         
     xncp=par->p1;
     xdf1=par->p2;
     xdf2=par->p3;
-    if(fabs(xncp)>1e-6) ans=qnf(x,xdf1,xdf2,xncp,1,0);
-    if(fabs(xncp)<=1e-6) ans=qf(x,xdf1,xdf2,1,0);
+    if(fabs(xncp)>1e-6) ans=rnchisq(xdf1,xncp)/rchisq(xdf2);
+    if(fabs(xncp)<=1e-6) ans=rf(xdf1,xdf2);
   }
   return(ans);
 }
+
 
 
 // qnt(double p, double df, double ncp, int lower_tail, int log_p)
@@ -126,8 +131,6 @@ void pwrFDRsim(int *pnsim, double *pFDR, int *pcntlFDF, int *pRomano, double *pF
 
     par0->p1 = par1->p1 = 0.0;
     par1->p1 = xncp;
-    U = unif_rand();
-    X_j = qdist(U, par1);
     /* Rprintf("xncp: %g, par0->opt: %d, par0->p1: %g, par0->p2: %g, par1->opt: %d, par1->p1: %g, par1->p2: %g\n",
 	    xncp, par0->opt, par0->p1, par0->p2,  par1->opt, par1->p1, par1->p2);
        Rprintf("U: %g, X_j: %g\n", U, X_j); */
@@ -144,8 +147,7 @@ void pwrFDRsim(int *pnsim, double *pFDR, int *pcntlFDF, int *pRomano, double *pF
         par0->p1 = par1->p1 = 0.0;
         if(j < M_i) par1->p1 = xncp;
 
-        U = unif_rand();
-	X_j = qdist(U, par1);
+	X_j = rdist(par1);
 	
         if(ii==0) *(pX_i + j) = X_j;
 

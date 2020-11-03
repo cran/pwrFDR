@@ -1,5 +1,5 @@
 Package: pwrFDR
-Version: 2.8.4
+Version: 2.8.6
 Title: FDR Power
 Author: Grant Izmirlian Jr <izmirlig@mail.nih.gov>
 Maintainer: Grant Izmirlian Jr <izmirlig@mail.nih.gov>
@@ -21,6 +21,6 @@ Encoding: UTF-8
 License: GPL (>= 2)
 LazyLoad: yes
 NeedsCompilation: yes
-Packaged: 2020-09-25 21:35:01 UTC; izmirlig
+Packaged: 2020-11-03 17:15:21 UTC; izmirlig
 Repository: CRAN
-Date/Publication: 2020-09-26 06:00:03 UTC
+Date/Publication: 2020-11-03 23:20:03 UTC

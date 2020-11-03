@@ -23,7 +23,7 @@
          grpj.per.grp1=NULL, FDP.control.method=c("BHFDR","BHCLT","Romano","Auto","both"),
          method=c("FixedPoint", "simulation"), n.sim=1000, temp.file,
          control=list(tol=1e-8, max.iter=c(1000,20), distopt=1, CS=list(NULL),sim.level=2,
-                      strict=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE))
+         low.power.stop=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE))
 }
 \arguments{
   \item{effect.size}{
@@ -148,7 +148,7 @@
 	   'sim.level' sim level 2 (default) stipulates, when FDP.control.method
 	         is set to "BHCLT", or "both", R.st.ht and T.st.ht are
 	         computed in addition to R.st and T.st (see above). \cr
-           'strict' in simulation option, will result in an error message 
+           'low.power.stop' in simulation option, will result in an error message 
    	         if the power computed via FixedPoint method is too low, which 
 	         result in no solution for the BHCLT option. Default setting is TRUE. 
 	         Set to FALSE to over-ride this behavior. \cr

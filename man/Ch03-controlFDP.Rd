@@ -67,7 +67,7 @@
 	  for example.
     'sim.level' sim level 2 results in more detail at the expense of
                 slightly more computational time.
-    'strict' in simulation option, will result in an error message if
+    'low.power.stop' in simulation option, will result in an error message if
              the power computed via FixedPoint method is too low, which
              result in no solution for the BHCLT option. Default setting
 	     is TRUE. Set to FALSE to over-ride.

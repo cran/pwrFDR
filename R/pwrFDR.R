@@ -4,7 +4,7 @@ function(effect.size, n.sample, r.1, alpha, delta=NULL, groups=2, N.tests,
          grpj.per.grp1=NULL, FDP.control.method=c("BHFDR","BHCLT","Romano","Auto","both"),
          method=c("FixedPoint", "simulation"), n.sim=1000, temp.file,
          control=list(tol=1e-8, max.iter=c(1000,20), distopt=1, CS=list(NULL), sim.level=2,
-                      strict=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE))
+                      low.power.stop=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE))
 {
     .call. <- m <- match.call()
     pfx <- as.character(m[[1]])
@@ -103,7 +103,9 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests,
     .call. <- m.sv <- m <- match.call()
     ee <- function(x)exp(exp(x))-1
     ll <- function(x)log(log(1 + x))
-
+    ijumps <- FALSE
+    Auto <- ""
+   
     is.msng <- control$is.msng
 
     pfx <- as.character(m[[1]])
@@ -138,17 +140,18 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests,
         {
           pwr <- rslt$pwr <- rslt$average.power
           pwr. <- max(min(pwr, 1-1e-16),1e-16)
-          out <- out.n <- ((logit(average.power) - logit(pwr.))^p[1])^(1/p[2])
+          out <- out.n <- ((logit(pwr.) - logit(average.power))^p[1])^(1/p[2])
         }
         if(use.L.pwr)
         {
           pwr <- rslt$pwr <- rslt$tp.power
           pwr. <- min(max(pwr, 1e-16), 1-1e-16)
-          out <- out.n <- ((logit(tp.power) - logit(pwr.))^p[1])^(1/p[2])
+          out <- out.n <- ((logit(pwr.) - logit(tp.power))^p[1])^(1/p[2])
         }        
         attr(out, "detail") <- rslt
         if(control$verb>0)
           cat(sprintf("(obj, %s, %s)=(%g, %g, %g)\n", misc$msng.nera, misc$pwr.nm, out, misc$psi.inv(x), pwr.))
+        if(control$verb>0 && is.na(out)) browser()            
         out
       }
       idistopt <- control$distopt
@@ -157,10 +160,10 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests,
       if(use.L.pwr) pwr <- tp.power
       if(!use.L.pwr) pwr <- average.power
 
-      l0 <- c(n.sample=4,        effect.size=0.01, r.1=0.00001, alpha=0.00001)
-      u0 <- c(n.sample=10000000, effect.size=2,    r.1=0.99999, alpha=0.99999)
-      l <- psi(l0[msng.nera])
-      u <- psi(u0[msng.nera])
+      l.nera <- c(n.sample=5,        effect.size=0.01, r.1=0.00001, alpha=0.00001)
+      u.nera <- c(n.sample=Inf, effect.size=2,    r.1=0.99999, alpha=0.99999)
+      l.x <- psi(l.nera[msng.nera])
+      u.x <- psi(u.nera[msng.nera])
       if(msng.nera=="n.sample")
       {
           grps <- groups
@@ -170,26 +173,49 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests,
           if(!use.L.pwr) pwr <- average.power
           gma <- r.1*pwr/(1-alpha.0)
           ftest.ss <- f.power(power=pwr, groups=grps, effect.size=effect.size, e.I=gma*alpha)
-          u <- min(5*ftest.ss$n.sample, 10000000)
+          u.x <- psi(10*ftest.ss$n.sample)
           done <- FALSE
-          nn <- psi.inv(l) - 1
-          while(!done && nn <= u)
+          while(!done)
           {
-              nn <- nn + 1
-              x <- psi(nn)
+              obj.ux <-OBJ(u.x,m=m.sv, misc=list(msng.nera=msng.nera, pwr.nm=pwr.nm, psi.inv=psi.inv), p=c(1,1))
+              done <- !is.na(obj.ux)
+              if(!done) u.x <- psi(psi.inv(u.x) -1)
+          }
+          lu.k <- c(l.x, u.x)
+          err <- 1
+          x <- u.x
+          iter <- 0
+          while(err > 1e-3)
+          {
+            while(err > 1e-3 && iter < 20)
+            {
               obj <- OBJ(x, m=m.sv, misc=list(msng.nera=msng.nera, pwr.nm=pwr.nm, psi.inv=psi.inv), p=c(1,1))
-              done <- obj < 0
+              pos <- obj > 0
+              err <- abs(obj)
+              if(control$verb > 0) cat(sprintf("n: %d, x: %g, lu.k[1]: %g, lu.k[2]: %g, obj: %g, err: %g\n",
+                                               ceiling(psi.inv(x)), x, lu.k[1], lu.k[2], obj, err))
+              lu.k <- pos*c(lu.k[1], x) + (1-pos)*c(x, lu.k[2])
+              x <- mean(lu.k)
+              iter <- iter + 1
+            }
+            if(err > 1e-3)
+            {
+              lu.k <- lu.k <- c(l.x, u.x)
+              if(m.sv$FDP.control.method %in% c("BHCLT","Auto")) m.sv$FDP.control.method <- Auto <- "Romano"
+              ijumps <- TRUE
+              iter <- 0
+            }
           }
           ans <- list(objective=obj)
-          y <- nn
+          y <- ceiling(psi.inv(x))
       }
       if(msng.nera!="n.sample")
       {
-          ans <- optimize(f=OBJ, lower=l, upper=u, m=m.sv, tol=.Machine$double.eps^0.35,
+          ans <- optimize(f=OBJ, lower=l.x, upper=u.x, m=m.sv, tol=.Machine$double.eps^0.35,
                           misc=list(msng.nera=msng.nera, pwr.nm=pwr.nm, psi.inv=psi.inv))
           obj <- ans$objective
           if(abs(obj)>1e-3) stop("No Solution, " %,% msng.nera %,% " too close to " %,%
-                                 l0[msng.nera] %,% " or " %,% u0[msng.nera] %,% " and " %,%
+                                 l.nera[msng.nera] %,% " or " %,% u.nera[msng.nera] %,% " and " %,%
                                  pwr.nm %,% " is " %,% signif(attr(obj,"detail")$pwr,3))
           y <- psi.inv(ans$minimum)
       }
@@ -214,6 +240,7 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests,
       dtl$pwr <- NULL
       out <- numeric(0)
       out[msng.nera] <- get(msng.nera)
+      if(ijumps) dtl$Auto <- Auto
       out <- c(out, dtl)
     }
     out
@@ -383,15 +410,15 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests,
     out <- list(average.power = average.power, c.g = c.g, gamma = gma, err.III=eIII)
     if(!is.N)
     {
-      out$sigma.rtm.Rom <- tau2^0.5
-      out$sigma.rtm.VoR <- sigma.rtm.VoR
-      out$sigma.rtm.ToM <- sigma.rtm.ToM
+      out$sigma.rtm.Rom <- max(tau2^0.5, 1e-10)
+      out$sigma.rtm.VoR <- max(sigma.rtm.VoR, 1e-10)
+      out$sigma.rtm.ToM <- max(sigma.rtm.ToM, 1e-10)
     }
     if(is.N)
     {
-      out$se.Rom <- (tau2/N.tests)^0.5
-      out$se.VoR <- sigma.rtm.VoR/N.tests^0.5
-      out$se.ToM <- sigma.rtm.ToM/N.tests^0.5
+      out$se.Rom <- max((tau2/N.tests)^0.5, 1e-10)
+      out$se.VoR <- max(sigma.rtm.VoR/N.tests^0.5, 1e-10)
+      out$se.ToM <- max(sigma.rtm.ToM/N.tests^0.5, 1e-10)
     }
     
     if(!is.null(Auto)) out$Auto <- Auto
@@ -420,9 +447,9 @@ function(groups, effect.size, n.sample, r.1, alpha, N.tests, control, lambda,
     m.FP.1X[[1]] <- as.name("pwrFDR.FP.1X")
     m.FP.1X$FDP.control.method <- "BHFDR"
     rslt.FP.1X <- eval(m.FP.1X, sys.parent())
-    strict <- control$strict
-    if(is.null(control$strict)) strict <- TRUE
-    if(rslt.FP.1X$average.power < 0.50 && strict)
+    low.power.stop <- control$low.power.stop
+    if(is.null(control$low.power.stop)) low.power.stop <- TRUE
+    if(rslt.FP.1X$average.power < 0.50 && low.power.stop)
         stop("You don't want to run a simulation on a set of inputs with average power < 0.50")
     verb <- control$verb
     idistopt <- control$distopt
@@ -1119,9 +1146,9 @@ function(effect.size, n.sample, r.1, alpha, delta, groups=2, N.tests,
         v <- r.0*ast.old*(1-r.0*ast.old*gma)/(N.tests*gma)
         ast.new <- (delta - v^0.5*qnorm(1-alpha))/r.0
         neg <- ast.new < 0 
-        if(control$verb) cat(sprintf("ast.new=%f\n", ast.new))
+        if(control$verb>1) cat(sprintf("ast.new=%f\n", ast.new))
         obj <- abs(ast.new-ast.old)
-        conv <- (obj < control$tol)
+        conv <- (obj < 1e-4*alpha)
         ast.old <- ast.new
     }
     if(neg)
@@ -1169,9 +1196,9 @@ function(effect.size, n.sample, r.1, alpha, delta, groups=2, N.tests,
         v <- r.0*ast.old*(1-r.0*ast.old*gma.st)/(N.tests*gma.st)
         ast.new <- (delta - v^0.5*qnorm(1 - alpha))/r.0
         neg <- ast.new < 0 
-        if(control$verb) cat(sprintf("ast.new=%f\n", ast.new))
+        if(control$verb>1) cat(sprintf("ast.new=%f\n", ast.new))
         obj <- abs(ast.new-ast.old)
-        conv <- (obj < control$tol)
+        conv <- (obj < 1e-4*alpha)
         ast.old <- ast.new
     }
     if(neg)
@@ -1196,7 +1223,7 @@ function(effect.size, n.sample, r.1, alpha, delta, groups=2, N.tests,
 function(u, effect.size, n.sample, r.1, alpha, delta, groups=2, N.tests,
          type=c("paired","balanced","unbalanced"), grpj.per.grp1=NULL, FDP.control.method="BHFDR", 
          control=list(tol=1e-8, max.iter=c(1000,20), distopt=1, CS=list(NULL), sim.level=2,
-                      strict=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE))
+                      low.power.stop=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE))
 {
   m <- .call. <- match.call()
   m[[1]] <- as.name("pwrFDR")
@@ -1215,7 +1242,7 @@ function(u, effect.size, n.sample, r.1, alpha, delta, groups=2, N.tests,
 function(u, effect.size, n.sample, r.1, alpha, delta, groups=2, N.tests,
          type=c("paired","balanced","unbalanced"), grpj.per.grp1=NULL, FDP.control.method="BHFDR", 
          control=list(tol=1e-8, max.iter=c(1000,20), distopt=1, CS=list(NULL), sim.level=2,
-                      strict=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE))
+                      low.power.stop=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE))
 {
   m <- .call. <- match.call()
   m[[1]] <- as.name("pwrFDR")
@@ -1234,7 +1261,7 @@ function(u, effect.size, n.sample, r.1, alpha, delta, groups=2, N.tests,
 function(u, effect.size, n.sample, r.1, alpha, delta, groups=2, N.tests, 
          type=c("paired","balanced","unbalanced"), grpj.per.grp1=NULL, FDP.control.method="BHFDR", 
          control=list(tol=1e-8, max.iter=c(1000,20), distopt=1, CS=list(NULL), sim.level=2,
-                      strict=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE))
+                      low.power.stop=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE))
 {
   m <- .call. <- match.call()
   m[[1]] <- as.name("pwrFDR")
@@ -1633,10 +1660,10 @@ default <- list(u=function(...)seq(from=0,to=1,len=100),
                     switch(1*(groups<=2)+2*(groups>2),
                                list(tol=1e-8, max.iter=c(1000,20), distopt=1, CS=list(NULL),
                                     sim.level=2, FDP.meth.thresh=FDP.cntl.mth.thrsh.def,
-                                    verb=FALSE),
+                                    verb=FALSE, low.power.stop=TRUE),
                                list(tol=1e-8, max.iter=c(1000,20), distopt=2, CS=list(NULL),
                                     sim.level=2, FDP.meth.thresh=FDP.cntl.mth.thrsh.def,
-                                    verb=FALSE)),
+                                    verb=FALSE, low.power.stop=TRUE)),
                 type=function(groups=groups,alpha=alpha)
                     c("paired","balanced")[min(max(floor(eval(groups)),1),2)],
                 grpj.per.grp1=function(...)1,
@@ -1822,7 +1849,7 @@ function(m, sppld, frmls, other.rules=TRUE, eval.env)
 }
 
 "pwrFDR.control" <-
-function(tol, max.iter, distopt, CS, sim.level, FDP.meth.thresh, verb, groups, alpha)
+function(tol, max.iter, distopt, CS, sim.level, FDP.meth.thresh, verb, low.power.stop, groups, alpha)
 {
     calling.env <- sys.parent()
     eval.env <- ifelse(calling.env==0, topenv, sys.parent)

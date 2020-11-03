@@ -69,7 +69,7 @@
 	   'sim.level' sim level 2 (default) stipulates, when FDP.control.method
 	         is set to "BHCLT", or "both", R.st.ht and T.st.ht are
 	         computed in addition to R.st and T.st (see above). \cr
-           'strict' in simulation option, will result in an error message 
+           'low.power.stop' in simulation option, will result in an error message 
    	         if the power computed via FixedPoint method is too low, which 
 	         result in no solution for the BHCLT option. Default setting is TRUE. 
 	         Set to FALSE to over-ride this behavior. \cr
