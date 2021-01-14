@@ -10,7 +10,7 @@
 \usage{
   pwrFDR.grid(effect.size, n.sample, r.1, alpha, delta, groups, N.tests,
               average.power, tp.power, lambda, type, grpj.per.grp1,
-              FDP.control.method)
+              FDP.control.method, control)
 }
 \arguments{
   \item{effect.size}{
@@ -109,6 +109,34 @@
 	      from the P-value data and then alpha.star computed from
               these.
   }
+  \item{control}{Optionally, a list with components with the following  
+                 components: \cr
+           'tol' is a convergence criterion used in iterative 
+   	         methods which is set to 1e-8 by default.
+	   'max.iter' is an iteration limit, set to 20 for the iterated
+	         function limit and 1000 for all others by default.
+	   'distop', specifying the distribution family of the central
+	         and non-centrally located sub-populations. distopt=1
+		 gives normal (2 groups), distop=2 gives t- (2 groups)
+		 and distopt=3 gives F- (2+ groups) \cr
+	   'CS', correlation structure, for use only with 'method="simulation"'  
+	         which will simulate m simulatenous tests with correlations 
+                 'rho' in blocks of size 'n.WC'. Specify as a list
+		 CS = list(rho=0.80,n.WC=50) for example.  \cr
+	   'sim.level' sim level 2 (default) stipulates, when FDP.control.method
+	         is set to "BHCLT", or "both", R.st.ht and T.st.ht are
+	         computed in addition to R.st and T.st (see above). \cr
+           'low.power.stop' in simulation option, will result in an error message 
+   	         if the power computed via FixedPoint method is too low, which 
+	         result in no solution for the BHCLT option. Default setting is TRUE. 
+	         Set to FALSE to over-ride this behavior. \cr
+           'FDP.meth.thresh' fine-tunes the 'Auto' voodoo (see above). Leave 
+	         this alone. \cr
+	   'verb' vebosity level.\cr
+	   'ast.le.a' leaving this at the default value TRUE forces
+	         'alpha.star', the solution under FDP.method.control="BHCLT",
+		 to be less than the specified 'alpha'.
+  }	    
 }
 \details{
    Arguments may be specified as vectors of possible values or can be

@@ -4,7 +4,8 @@ function(effect.size, n.sample, r.1, alpha, delta=NULL, groups=2, N.tests,
          grpj.per.grp1=NULL, FDP.control.method=c("BHFDR","BHCLT","Romano","Auto","both"),
          method=c("FixedPoint", "simulation"), n.sim=1000, temp.file,
          control=list(tol=1e-8, max.iter=c(1000,20), distopt=1, CS=list(NULL), sim.level=2,
-                      low.power.stop=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE))
+             low.power.stop=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE,
+                      ast.le.a=TRUE))
 {
     .call. <- m <- match.call()
     pfx <- as.character(m[[1]])
@@ -35,7 +36,7 @@ function(effect.size, n.sample, r.1, alpha, delta=NULL, groups=2, N.tests,
 
 "pwrFDR.grid" <-
 function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests, average.power,
-             tp.power, lambda, type, grpj.per.grp1, FDP.control.method)
+             tp.power, lambda, type, grpj.per.grp1, FDP.control.method, control)
 {
     .call. <- m <- fd <- match.call()
     pfx <- as.character(m[[1]])
@@ -253,6 +254,7 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests,
 {
     .call. <- m <- m.sv <- match.call()
     is.msng <- control$is.msng
+    ast.le.a <- control$ast.le.a
     if(is.msng["alpha"]) .call.$delta <- m$delta <- m.sv$delta <- m$alpha
 
     is.N <- !missing(N.tests)
@@ -338,6 +340,7 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests,
       m.cntlfdp[[1]] <- as.name("controlFDP")
       m.cntlfdp$lambda <- m.cntlfdp$FDP.control.method <- NULL
       alpha.st <- eval(m.cntlfdp, sys.parent())$alpha.star
+      if(ast.le.a) alpha.st <- min(alpha.st, alpha)
       if(is.na(alpha.st)) FDP.control.method <- Auto <- "Romano"
       if(!is.na(alpha.st))
       {
@@ -453,6 +456,7 @@ function(groups, effect.size, n.sample, r.1, alpha, N.tests, control, lambda,
         stop("You don't want to run a simulation on a set of inputs with average power < 0.50")
     verb <- control$verb
     idistopt <- control$distopt
+    ast.le.a <- control$ast.le.a
     
     nii.sample <- n.sample
     if(groups>=2 && type==3) nii.sample <- n.sample*grpj.per.grp1
@@ -480,6 +484,7 @@ function(groups, effect.size, n.sample, r.1, alpha, N.tests, control, lambda,
         m.cntlFDP[[1]] <- as.name("controlFDP")
         alpha.st <- eval(m.cntlFDP, sys.parent())$alpha.star
         alpha.st <- ifelse(!is.na(alpha.st), alpha.st, -1)
+        if(ast.le.a) alpha.st <- min(alpha.st, alpha)
         BHCLT.lvl <- ifelse(alpha.st > 0, BHCLT.lvl, 0)
     }
     is.CS <- !is.null(control$CS[[1]])
@@ -1660,10 +1665,10 @@ default <- list(u=function(...)seq(from=0,to=1,len=100),
                     switch(1*(groups<=2)+2*(groups>2),
                                list(tol=1e-8, max.iter=c(1000,20), distopt=1, CS=list(NULL),
                                     sim.level=2, FDP.meth.thresh=FDP.cntl.mth.thrsh.def,
-                                    verb=FALSE, low.power.stop=TRUE),
+                                    verb=FALSE, low.power.stop=TRUE, ast.le.a=TRUE),
                                list(tol=1e-8, max.iter=c(1000,20), distopt=2, CS=list(NULL),
                                     sim.level=2, FDP.meth.thresh=FDP.cntl.mth.thrsh.def,
-                                    verb=FALSE, low.power.stop=TRUE)),
+                                    verb=FALSE, low.power.stop=TRUE, ast.le.a=TRUE)),
                 type=function(groups=groups,alpha=alpha)
                     c("paired","balanced")[min(max(floor(eval(groups)),1),2)],
                 grpj.per.grp1=function(...)1,
@@ -1849,7 +1854,7 @@ function(m, sppld, frmls, other.rules=TRUE, eval.env)
 }
 
 "pwrFDR.control" <-
-function(tol, max.iter, distopt, CS, sim.level, FDP.meth.thresh, verb, low.power.stop, groups, alpha)
+function(tol, max.iter, distopt, CS, sim.level, FDP.meth.thresh, verb, low.power.stop, ast.le.a, groups, alpha)
 {
     calling.env <- sys.parent()
     eval.env <- ifelse(calling.env==0, topenv, sys.parent)
@@ -1870,7 +1875,15 @@ function(tol, max.iter, distopt, CS, sim.level, FDP.meth.thresh, verb, low.power
     m[[1]] <- as.name("list")
     eval(m, eval.env())
 }
+#######################################################################
+## end argument checking/default argument block                      ##
+#######################################################################
 
+
+
+#######################################################################
+## test statistic distribution block                                 ##
+#######################################################################
 DF <- c(expression(n.sample-1),
         expression(groups*(n.sample-1)),
         expression(groups^2*(n.sample-1)/(1 + sum((n.sample-1)/(nii.sample-1)))))
@@ -1901,9 +1914,8 @@ c(### F with 'groups' groups, effect.size=theta*c(0, 0.5, 0.5, ..., 0.5, 1)
   ddist=function(x, par) df(x, ncp=par[2], df1=par[3], df2=par[4]),
   pdist=function(x, par) pf(x, ncp=par[2], df1=par[3], df2=par[4]),
   qdist=function(x, par) qf(x, ncp=par[2], df1=par[3], df2=par[4]))))
-
 #######################################################################
-## end argument checking/default argument block                      ##
+## END test statistic distribution block                             ##
 #######################################################################
 
 

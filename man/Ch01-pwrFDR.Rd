@@ -23,7 +23,8 @@
          grpj.per.grp1=NULL, FDP.control.method=c("BHFDR","BHCLT","Romano","Auto","both"),
          method=c("FixedPoint", "simulation"), n.sim=1000, temp.file,
          control=list(tol=1e-8, max.iter=c(1000,20), distopt=1, CS=list(NULL),sim.level=2,
-         low.power.stop=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE))
+         low.power.stop=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE,
+         ast.le.a=TRUE))
 }
 \arguments{
   \item{effect.size}{
@@ -154,7 +155,10 @@
 	         Set to FALSE to over-ride this behavior. \cr
            'FDP.meth.thresh' fine-tunes the 'Auto' voodoo (see above). Leave 
 	         this alone. \cr
-           'verb' vebosity level.
+	   'verb' vebosity level.\cr
+	   'ast.le.a' leaving this at the default value TRUE forces
+	         'alpha.star', the solution under FDP.method.control="BHCLT",
+		 to be less than the specified 'alpha'.
   }
   \item{n.sim}{If 'simulation' method is chosen you may specify number of
   	      simulations. Default is 1000.
