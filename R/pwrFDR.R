@@ -712,10 +712,12 @@ function(FPR0, FPR1=NULL, TPR0, TPR1=NULL, b=NULL)
 function(FPR0, FPR1, TPR0, b=NULL)
 {
   if(missing(b)) b <- 1
-  r <- (b*dnorm(qnorm(1-TPR0))/dnorm(qnorm(1-FPR1)))^(-1)
-  k <- (((FPR1*(1-FPR1))/(TPR0*(1-TPR0)))^0.5/r)^(-1)
-  k <- ceiling(k)
-  nu <- 2^0.5*(FPR1-FPR0)/((FPR1*(1-FPR1) + r^2/k*(1-TPR0)*TPR0)*(1+k))^0.5
+  v.tpr0 <- TPR0*(1-TPR0)
+  v.fpr1 <- FPR1*(1-FPR1)
+  r <- b*dnorm(qnorm(1-TPR0))/dnorm(qnorm(1-FPR1))
+  k <- (v.fpr1/v.tpr0)^0.5/r
+#  k <- ceiling(k)
+  nu <- (FPR1-FPR0)/(v.fpr1 + r^2/k*v.tpr0)^0.5
   abs(nu)
 }
 
@@ -723,19 +725,24 @@ function(FPR0, FPR1, TPR0, b=NULL)
 function(FPR0, FPR1, TPR0, b=NULL)
 {
   if(missing(b)) b <- 1
-  r <- (b*dnorm(qnorm(1-TPR0))/dnorm(qnorm(1-FPR1)))^(-1)
-  k <- (((FPR1*(1-FPR1))/(TPR0*(1-TPR0)))^0.5/r)^(-1)
-  ceiling(k)
+  v.tpr0 <- TPR0*(1-TPR0)
+  v.fpr1 <- FPR1*(1-FPR1)
+  r <- b*dnorm(qnorm(1-TPR0))/dnorm(qnorm(1-FPR1))
+  k <- (v.fpr1/v.tpr0)^0.5/r
+#  k <- ceiling(k)
+  k
 }
 
 "es.ROC.fxFPR" <-
 function(FPR0, TPR0, TPR1, b=NULL)
 {
   if(missing(b)) b <- 1
-  r <- (b*dnorm(qnorm(TPR1))/dnorm(qnorm(FPR0)))^(-1)
-  k <- (((TPR1*(1-TPR1))/(FPR0*(1-FPR0)))^0.5/r)^(-1)
-  k <- ceiling(k)
-  nu <- 2^0.5*(TPR1-TPR0)/((TPR1*(1-TPR1) + r^2*k*(1-FPR0)*FPR0)*(1+k))^0.5
+  v.fpr0 <- FPR0*(1-FPR0)
+  v.tpr1 <- TPR1*(1-TPR1)
+  r <- b*dnorm(qnorm(TPR1))/dnorm(qnorm(FPR0))
+  k <- (v.tpr1/v.fpr0)^0.5/r
+#  k <- ceiling(k)
+  nu <- (TPR1-TPR0)/(v.tpr1 + k*r^2*v.fpr0)^0.5
   abs(nu)
 }
 
@@ -743,9 +750,12 @@ function(FPR0, TPR0, TPR1, b=NULL)
 function(FPR0, TPR0, TPR1, b=NULL)
 {
   if(missing(b)) b <- 1
-  r <- (b*dnorm(qnorm(TPR1))/dnorm(qnorm(FPR0)))^(-1)
-  k <- (((TPR1*(1-TPR1))/(FPR0*(1-FPR0)))^0.5/r)^(-1)
-  ceiling(k)
+  v.fpr0 <- FPR0*(1-FPR0)
+  v.tpr1 <- TPR1*(1-TPR1)
+  r <- b*dnorm(qnorm(TPR1))/dnorm(qnorm(FPR0))
+  k <- (v.tpr1/v.fpr0)^0.5/r
+#  k <- ceiling(k)
+  k
 }
 
 "CDF.Pval" <-
@@ -1573,6 +1583,13 @@ function(alpha, effect.size, n.pergroup, x, prior.HA, N.tests, groups=2, method=
     ans
 }
 
+"view.presentation" <-
+function()
+{
+    n <- grep("pdf", names(options()))
+    system(options()[[n]] %,%  " $R_HOME/library/pwrFDR/doc/2021-01-25-NWU-Biostat-Talk.pdf 2> /dev/null &")
+}
+
 "factorial.design" <-
 function(...)
 {
@@ -1886,7 +1903,7 @@ function(tol, max.iter, distopt, CS, sim.level, FDP.meth.thresh, verb, low.power
 #######################################################################
 DF <- c(expression(n.sample-1),
         expression(groups*(n.sample-1)),
-        expression(groups^2*(n.sample-1)/(1 + sum((n.sample-1)/(nii.sample-1)))))
+        expression((1/n.sample + sum(1/nii.sample))^2/(1/(n.sample^2*(n.sample-1)) + sum(1/(nii.sample^2*(nii.sample-1))))))
 
 NCP <- c(expression(n.sample^0.5*effect.size),
          expression((n.sample/groups)^0.5*effect.size),
@@ -1924,6 +1941,7 @@ c(### F with 'groups' groups, effect.size=theta*c(0, 0.5, 0.5, ..., 0.5, 1)
     options(stringsAsFactors=FALSE)
     ver <- read.dcf(file=system.file("DESCRIPTION", package=pkgname), fields="Version")
     msg <- paste(pkgname, ver) %,% "\n\n" %,% "Type ?pwrFDR"
+    msg <- msg %,% "\n" %,% "  or   view.presentation()"
     packageStartupMessage(msg)
 }
 

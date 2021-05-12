@@ -1,6 +1,7 @@
-a38583939cebe1668d82b9976e1016ab *DESCRIPTION
-b647ec11990da79ef1b72a108637a9a7 *NAMESPACE
-2d373db8949eb4f408782a4ed3be91fc *R/pwrFDR.R
+af8b39b2fd22e6cc0c74a3a27c0a1fd6 *DESCRIPTION
+230a4e20d96ab883688c8af856876d37 *NAMESPACE
+29011ce1dac0f87a124af7dd58c96bda *R/pwrFDR.R
+87934572a7fc08ce6f2f5e4435e2a19c *inst/doc/2021-01-25-NWU-Biostat-Talk.pdf
 9196f847665dd03723a1ae938506312c *man/Ch01-pwrFDR.Rd
 95c7342ceb95c76e6a53a0b47f569c7d *man/Ch02-pwrFDR-grid.Rd
 94fee91c609d3b7902612a4db58f672a *man/Ch03-controlFDP.Rd
@@ -29,6 +30,7 @@ c08a535c987e6bed24ddd2cffee2baee *man/Ch23-criterion.Rd
 97359aa4001911cb29cc769f608b9607 *man/Ch26-if-na-x.Rd
 f486ca0da7f94c157b65683ef6eaa6c3 *man/Ch27-if-y-z.Rd
 41406dd6af815ffce8cba3af909456f6 *man/Ch28-nna.Rd
+261f275963760409d925aa96c440f7bf *man/Ch29-view-presentation.Rd
 f9d52280dff91a06c2e42c57accc44b7 *src/pwrFDRsim.c
 1526ed4552467ec4c4d932a92e7c7a9e *src/pwrFDRsimCS.c
 d50944ab50300ec4e6f206814841d681 *src/registerDynamicSymbol.c
