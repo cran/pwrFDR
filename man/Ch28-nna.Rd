@@ -25,7 +25,7 @@
 }
 \examples{
   sim.1 <- pwrFDR(effect.size=0.8, n.sample=60, lambda=0.90, r.1=0.05, N.tests=450, alpha=0.15,
-                  method="sim", FDP.control.method="BHCLT")
+                  method="sim", FDP.control.method="BHFDX")
 
   sim.2 <- pwrFDR(effect.size=0.8, n.sample=60, lambda=0.90, r.1=0.05, N.tests=450, alpha=0.15,
                   method="sim", FDP.control.method="both", control=list(sim.level=2))

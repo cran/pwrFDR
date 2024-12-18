@@ -29,7 +29,7 @@
   simultaneous tests, m, gives an indication of the range of values
   one can expect for the significant call proportion. The standard
   deviations of the ratios R_m/m, T_m/M_m, and V_m/R_m are used
-  internally in control of the distribution of V_m/R_m for the BHCLT
+  internally in control of the distribution of V_m/R_m for the BHFDX
   FDP control method, and in calculation of the tail probability power
   for T_m/M_m. 
 }
@@ -46,6 +46,10 @@
   Izmirlian G. (2017) Average Power and \eqn{\lambda}-power in
     Multiple Testing Scenarios when the Benjamini-Hochberg False
     Discovery Rate Procedure is Used. <arXiv:1801.03989>
+
+  Kluger D. M., Owen A. B. (2023) A central limit theorem for the
+    Benjamini-Hochberg false discovery proportion under a factor model.
+    Bernoulli; xx:xxx-xxx.
 }
 \author{
   Grant Izmirlian <izmirlig at mail dot nih dot gov>
@@ -64,7 +68,7 @@
   ## Asymptotic standard deviation of positive call proportion under BHFDR
   sdrtmRomBHFDR  <- sd.rtm.Rom(rslt.BHFDR)
 
-  ## Asymptotic standard deviation of positive call proportion under BHCLT
+  ## Asymptotic standard deviation of positive call proportion under BHFDX
   sdrtmRomAuto1 <- sd.rtm.Rom(rslt.Auto.1)
 
   ## Asymptotic standard deviation of positive call proportionunder Romano

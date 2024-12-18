@@ -18,13 +18,16 @@
   describing the methodology with a simulation study is in preparation.
 }
 \usage{
-  pwrFDR(effect.size, n.sample, r.1, alpha, delta=NULL, groups=2, N.tests,
-         average.power, tp.power, lambda, type=c("paired","balanced","unbalanced"),
-         grpj.per.grp1=NULL, FDP.control.method=c("BHFDR","BHCLT","Romano","Auto","both"),
-         method=c("FixedPoint", "simulation"), n.sim=1000, temp.file,
-         control=list(tol=1e-8, max.iter=c(1000,20), distopt=1, CS=list(NULL),sim.level=2,
-         low.power.stop=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def, verb=FALSE,
-         ast.le.a=TRUE))
+  pwrFDR(effect.size, n.sample, r.1, alpha, delta = NULL, groups = 2, N.tests,
+         average.power, TPX.power, lambda, type = c("paired","balanced","unbalanced"),
+         grpj.per.grp1=NULL, corr.struct=list(type=c("CS-Blocks","Toeplitz-Blocks"),
+                                              block.size=NA, rho = NA),
+         FDP.control.method = c("BHFDR","BHFDX","Romano","Auto","both","Holm","Hochberg",
+                                "Bonferroni"),
+         distopt=1, method = c("Theoretical","simulation"), n.sim = 1000, temp.file,
+         control=list(tol=1e-08, max.iter=c(1000, 20), sim.level=2, low.power.stop=TRUE, 
+                      FDP.meth.thresh=FDP.cntl.mth.thrsh.def, ast.le.a=TRUE, verb=FALSE,
+                      show.footer=FALSE)) 
 }
 \arguments{
   \item{effect.size}{
@@ -41,10 +44,10 @@
   } 
   \item{alpha}{
     The false discovery rate (in the BH case) or the upper bound on the
-    probability that the FDP exceeds delta (BHCLT and Romano case)
+    probability that the FDP exceeds delta (BHFDX and Romano case)
   }
   \item{delta}{
-    If the "FDP.control.method" is set to 'Romano' or 'BHCLT', then the
+    If the "FDP.control.method" is set to 'Romano' or 'BHFDX', then the
     user can set the exceedance thresh-hold for the FDP tail probability
     control \eqn{P\{ FDP > \delta \} < \alpha}. The default value is
     \eqn{\alpha}.
@@ -58,12 +61,12 @@
   }
   \item{average.power}{
     The desired average power. Sample size calculation requires
-    specification of either 'average.power' or 'tp.power'.
+    specification of either 'average.power' or 'TPX.power'.
   }
-  \item{tp.power}{
+  \item{TPX.power}{
     The desired tp-power (see details for explanation). Sample
     size calculation requires specification of either 'average.power'
-    or 'tp.power'.
+    or 'TPX.power'.
   }
   \item{lambda}{
     The tp-power threshold, required when calculating the tp-power
@@ -83,82 +86,110 @@
     groups, the group j to group 1 ratio, where group 1 is the group
     with the largest effect under the alternative hypothesis. 
   }
+  \item{corr.struct}{Specifies a block correlation structure between test
+    statistics which is used in both the simulation routine, and in the
+    computations based upon asymptotic approximation, e.g. the AFDX
+    control and the ATPP method. Its form is specified via the following
+    named elements.\cr
+          "type": a string taking the value "CS-Blocks" for compound 
+                  compound symmetry within blocks or "Toeplitz-Blocks"
+                  for toeplitz within blocks, respectively.\cr
+    "block.size": the size of the correlated blocks\cr
+           "rho": When type="CS-Blocks", then 'rho' is a correlation of length 1
+                  when type="Toeplitz-Blocks", then 'rho' is a vector of
+		  correlations of length 'block.size' - 1
+  }
   \item{FDP.control.method}{
     A character string specifying how the false discovery proportion (FDP) is to be
     controlled. You may specify the whole word or any shortened uniquely
     identifying truncation. \cr
      "BHFDR": the usual BH-FDR \cr
-     "BHCLT": use asymptotic approximation to the distribution of the FDP 
-              to find a smaller FDR which guarantees probability less
-              than alpha that the FDP exceeds alpha. \cr
-    "Romano": use Romano's method which guarantees probability less than 
-              alpha that the FDP exceeds alpha. \cr
+     "BHFDX": guarantees control of the FDX e.g. probability that the FDP exceeds 
+              delta will be less than alpha. Uses asymptotic approximationto the 
+	      distribution of the FDP to find alpha* such that the BHFDR
+	      procedure controls the FDX at alpha. Only slightly more conservative
+              than BHFDR control at alpha. Allows dependence which must be specified.
+              Not guaranteed to have a solution in all cases, in which case Romano's
+              procedure is used as a fall-back.\cr
+    "Romano": use Romano's method which guarantees control of the FDX,
+              e.g. the probability that the FDP exceeds delta will
+              be less than alpha. \cr
       "Auto": in 'FixedPoint' mode, the program will use its own 
               wisdom to determine which choice above to make. The 
-              order of conservatism is Romano > BHCLT > BHFDR, but 
-              BHFDR offers only expected control while the other two 
+              order of conservatism is\cr
+	      Bonferroni > Holm > Hochberg > Romano > BHFDX > BHFDR,\cr
+	      but BHFDR offers only expected control, the most
+	      conservative 3 control the FWER and the other two 
               guarantee bounds on the excedance probabilty. If the 
 	      distribution of the FDP is nearly degenerate, then BHFDR 
 	      is the best option. Otherwise, if it can be reliably used, 
-              BHCLT would be the best choice. The 'effective' denominator, 
+              BHFDX would be the best choice. The 'effective' denominator, 
 	      gamma*N.tests, in the CLT determines when the approximation 
 	      is good enough and the asymptotic standard error of the FDP 
 	      determines when the distribution is dispersed enough to matter.
               Use "Auto" to run through these checks and determine the best. 
               A return argument, 'Auto', displays the choice made. See 
               output components and details. \cr
-      "both": in 'simulation' mode, compute statistics R and T under BHCLT
+      "both": in 'simulation' mode, compute statistics R and T under BHFDX
               and Romano (in addition to BHFDR). Corresponding
-	      statistics are denoted R.st, T.st corresponding to BHCLT
+	      statistics are denoted R.st, T.st corresponding to BHFDX
 	      control of the FDP, and R.R and T.R corresponding to
 	      Romano control of the FDP. If sim.level is set to 2,
 	      (default) the statistics R.st.ht and T.st.ht, which are
-	      the number rejected and number true positives under BHCLT
+	      the number rejected and number true positives under BHFDX
 	      where r_0 = 1-r_1, gamma, and alpha.star have been estimated 
 	      from the P-value data and then alpha.star computed from
-              these.
-  }	    
+              these.\cr
+      "Holm": Use Holm's step-down procedure which guarantees control of the
+              family-wise error rate (FWER)
+  "Hochberg": Use Hochberg's step-up procedure which guarantees control
+              of the FWER if the tests are independent. Less conservative 
+	      than Holm and Bonferroni but more conservative than all other 
+              procedures here.\cr
+"Bonferroni": Use the Bonferroni procedure. Guarantees control of the FWER.
+              the most conservative of procedures offered here.
+
+  }
+  \item{distopt}{Test statistic distribution in among null and
+                 alternatively distributed sub-populations.
+		 distopt=0 gives normal (2 groups), distop=1 gives t- (2 groups)
+		 and distopt=2 gives F- (2+ groups)
+  }  
   \item{method}{Specify the method whereby the average power is calculated. 
                 You may specify the whole word or any unqiuely indentifying  
                 truncation.\cr
-          "FixedPoint": use the fixed point method, e.g., 
-	        first find the solution to the equation u = G(alpha u) where 
-	        G is the CDF of the pooled P-values. This solution gives 
-   	        'gamma', the positive proportion. The average power and other 
-	        quantities are then determined e.g. 
-	        average.power = G_1( gamma alpha), where G_1 is the CDF of the 
-	        P-values corresponding to statistics drawn under H_A. \cr
-          "simulation": uses brute force simulation to determine the average power.
-                NOTE: the "FixedPoint" technique is approximate in that it 
-                results in large sample values.
+         "Theoretical": for all procedures but Bonferroni, use the fixed
+	        point method, e.g., first find the solution to the equation 
+		u = G(alpha u) where G is the CDF of the pooled P-values. 
+		This solution gives 'gamma', the positive proportion. The average 
+		power and TPX power can then be determined e.g.
+		average.power = G_1( gamma alpha), where G_1 is the CDF
+		of the P-values corresponding to statistics drawn under H_A. 
+		TPX power is determined via asymptotic approximation.\cr
+          "simulation": uses brute force simulation to determine the
+                average power and TPX power. 
   }
   \item{control}{Optionally, a list with components with the following  
                  components: \cr
            'tol' is a convergence criterion used in iterative 
-   	         methods which is set to 1e-8 by default.
+   	         methods which is set to 1e-8 by default.\cr
 	   'max.iter' is an iteration limit, set to 20 for the iterated
-	         function limit and 1000 for all others by default.
-	   'distop', specifying the distribution family of the central
-	         and non-centrally located sub-populations. distopt=1
-		 gives normal (2 groups), distop=2 gives t- (2 groups)
-		 and distopt=3 gives F- (2+ groups) \cr
-	   'CS', correlation structure, for use only with 'method="simulation"'  
-	         which will simulate m simulatenous tests with correlations 
-                 'rho' in blocks of size 'n.WC'. Specify as a list
-		 CS = list(rho=0.80,n.WC=50) for example.  \cr
+	         function limit and 1000 for all others by default.\cr
 	   'sim.level' sim level 2 (default) stipulates, when FDP.control.method
-	         is set to "BHCLT", or "both", R.st.ht and T.st.ht are
+	         is set to "BHFDX", or "both", R.st.ht and T.st.ht are
 	         computed in addition to R.st and T.st (see above). \cr
            'low.power.stop' in simulation option, will result in an error message 
    	         if the power computed via FixedPoint method is too low, which 
-	         result in no solution for the BHCLT option. Default setting is TRUE. 
+	         result in no solution for the BHFDX option. Default setting is TRUE. 
 	         Set to FALSE to over-ride this behavior. \cr
            'FDP.meth.thresh' fine-tunes the 'Auto' voodoo (see above). Leave 
 	         this alone. \cr
-	   'verb' vebosity level.\cr
 	   'ast.le.a' leaving this at the default value TRUE forces
-	         'alpha.star', the solution under FDP.method.control="BHCLT",
-		 to be less than the specified 'alpha'.
+	         'alpha.star', the solution under FDP.method.control="BHFDX",
+		 to be less than the specified 'alpha'.\cr
+           'verb' vebosity level.\cr
+    'show.footer' optionally, show a textual output
+
   }
   \item{n.sim}{If 'simulation' method is chosen you may specify number of
   	      simulations. Default is 1000.
@@ -216,7 +247,7 @@
          may differ non-negligibly from the FDR. For this reason, the
          function supplies two other methods of FDP control in addition to
          FDP.control.method="BHFDR". These two alternate methods,
-         FDP.control.method="Romano" and FDP.control.method="BHCLT"
+         FDP.control.method="Romano" and FDP.control.method="BHFDX"
          guarantee control of the tail probability of the FDP
          distribution:
        
@@ -236,7 +267,7 @@
          The default is 10\%. When the standard error to alpha ratio is
          10\% or less then the BHFDR, being the least conservative, is
          preferred. When the se to alpha ratio is 10\% or more, then
-         Romano and BHCLT are decided between, with the BHCLT (asymptotic
+         Romano and BHFDX are decided between, with the BHFDX (asymptotic
          approximation) being less conservative than Romano and therefor
          preferred if the CLT approximation is adequate. This will be the
 	 case provided \eqn{m} is large enough,
@@ -276,26 +307,31 @@
 	 'average power'
 
 	 2. Specify 'n.sample', 'effect.size', 'r.1', 'alpha' and 'lambda'. 
-	 'N.tests' is also required. The function wil calculate the 'tp.power'
+	 'N.tests' is also required. The function wil calculate the 'TPX.power'
 	 in addition to the 'average power'.
 
-	 3. Specify the 'average.power' or the pair 'tp.power' and 'lambda'. 
+	 3. Specify the 'average.power' or the pair 'TPX.power' and 'lambda'. 
  	 Specify all but one of the parameters, 'n.sample', 'effect.size', 'r.1' 
 	 and 'alpha'. The function will calculate the value of the missing 
 	 parameter required for the specified 'average power' or 'tp-power'. 
 	 Note: a solution is guaranteed for missing 'n.sample' and missing
-	 'effect.size', but not necessarily for missing 'r.1' or 'alpha'. 
+	 'effect.size', but not necessarily for missing 'r.1' or
+ 	 'alpha'. 
+
+	 The Holm, Hochberg and Bonferroni procedures for controlling
+	 the FWER under the assumption of independent test statistics
+	 are also provided for sake of completeness.
 }
 \value{
   An object of class "pwr" with with components including:
   \item{call}{The call which produced the result}
   \item{average.power}{Resulting average power.}
-  \item{tp.power}{When 'lambda' is specified, the tp-power is also computed}
+  \item{TPX.power}{When 'lambda' is specified, the tp-power is also computed}
   \item{L.eq}{The lambda at which the tp-power and average-power are equal.}
   \item{n.sample}{If 'n.sample' is missing from the argument list, then
     the sample size required for the specified average- or lambda-
     power.}
-  \item{alpha.star}{If 'FDP.control.method' was set to "BHCLT" or it
+  \item{alpha.star}{If 'FDP.control.method' was set to "BHFDX" or it
     resulted from the "Auto" setting, the alpha at which the probability
     that the FDP exceeds alpha.star is less than or equal to the
     originally specified alpha.} 
@@ -331,12 +367,16 @@
   Jung S-H. (2005) Sample size for FDR-control in microarray data
     analysis. Bioinformatics; 21:3097-3104.
   
+  Kluger D. M., Owen A. B. (2023) A central limit theorem for the
+    Benjamini-Hochberg false discovery proportion under a factor model.
+    Bernoulli; xx:xxx-xxx.
+
   Liu P. and Hwang J-T. G. (2007) Quick calculation for sample size while
     controlling false discovery rate with application to microarray
     analysis. Bioinformatics; 23:739-746.
 
   Lehmann E. L., Romano J. P.. Generalizations of the familywise error
-    rate. Ann. Stat.. 2005;33(3):1138–1154.
+    rate. Ann. Stat.. 2005;33(3):1138-1154.
 
   Romano Joseph P., Shaikh Azeem M.. Stepup procedures for control of
     generalizations of the familywise error rate. Ann. Stat..
@@ -380,7 +420,7 @@
 
 ## Example 1f: sample size required for given tp-power
 
-   rslt.ss.lpwr <- pwrFDR(effect.size=0.79, tp.power=0.82, lambda=0.80,
+   rslt.ss.lpwr <- pwrFDR(effect.size=0.79, TPX.power=0.82, lambda=0.80,
                           r.1=2000/54675, alpha=0.15, N.tests=54675)
    rslt.ss.lpwr
 
@@ -421,8 +461,10 @@
 \keyword{FDR}
 \keyword{Benjamini}
 \keyword{Hochberg}
+\keyword{FDX}
 \keyword{microarrays}
 \keyword{Multiple.Testing}
 \keyword{average.power}
+\keyword{TPX}
 \keyword{k.power}
-\keyword{lambda.power}
+\keyword{TPX.power}

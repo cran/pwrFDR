@@ -46,13 +46,18 @@
                         distribution function) corresponding to the particular 
                         distribution. A function of arguments 'x' and 'par'. 
                         See details below.}
+    \item{\code{rdist}}{a list vector with components set to the functions, each
+                        one capable of simulating a specified number of
+			replicates corresponding to the particular 
+                        distribution. A function of arguments 'n' and 'par'. 
+                        See details below.}
   }
 }
 \details{
    \code{dists} is a data.frame with components \code{pars0}, \code{pars1}, 
-   \code{minv}, \code{ddist}, \code{pdist}, and \code{qdist}. For the three 
-   available distribution options, "normal", "t" and "f", the components
-   \code{pars0} and \code{pars1} take the following form:\cr
+   \code{minv}, \code{ddist}, \code{pdist}, \code{qdist} and \code{rdist}. 
+   For the three available distribution options, "normal", "t" and "f",
+   the components \code{pars0} and \code{pars1} take the following form:\cr
 
 \tabular{ll}{
 1. pars0                              \tab  pars1                                    \cr
@@ -62,14 +67,16 @@
 The component \code{minv} gives the minumum value of the support set of the
 distribution. For the above named three available distribution options,
 \code{minv} is set to the values -Inf, -Inf and 0, respectively. The components
-\code{ddist}, \code{pdist}, and \code{qdist} contain functions defining the
-density, CDF, and quantile function, respectively. For the above named three
-available distribution options, \code{ddist} takes the following form:\cr
+\code{ddist}, \code{pdist}, \code{qdist}, and \code{rdist} contain functions
+defining the density, CDF, quantile, and simulator function, respectively. For
+the above named three available distribution options, \code{ddist} takes
+the following form:\cr
 \tabular{l}{
 1. ddist                                                             \cr
 2. function (x, par) dnorm(x, mean = par[2], sd = par[3])            \cr
 3. function (x, par) dt(x, ncp = par[2], df = par[3])                \cr
-4. function (x, par) df(x, ncp = par[2], df1 = par[3], df2 = par[4]) \cr}
+4. function (x, par) df(x, ncp = par[2], df1 = par[3], df2 = par[4]) \cr
+exept for rdist, which has arguments 'n' and 'par'\cr}
 
 The components \code{pdist} and \code{qdist} are nearly identical to the
 component \code{ddist}, but with pnorm, pt, pf and qnorm, qt, qf replacing

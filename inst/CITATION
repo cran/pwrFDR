@@ -1,0 +1,43 @@
+"%,%" <- paste0
+
+citHeader("To cite pwrFDR in publications use:")
+
+ bibentry(bibtype = "Manual",
+            title = "Computing Average- and TPX- Power under various BHFDR type sequential " %,%
+                    "procedures",
+           author = person(family="Izmirlian Jr", given="Grant",email="grant.izmirlian@nih.gov"),
+             year = "2024",
+             note = "R package version 3.2.0",
+      textVersion = 
+           paste("G. Izmirlian Jr (2024). ", 
+                 "Computing Average- and TPX- Power under various BHFDR type sequential " %,%
+                 "procedures. ","R packgae version 3.2.0", sep=""))
+
+ bibentry(bibtype = "misc",
+            title = "Average Power and lambda-power in Multiple Testing Scenarios when the " %,%
+                    "Benjamini-Hochberg False Discovery Rate Procedure is Used", 
+           author = person(family="Izmirlian Jr", given="Grant",email="grant.izmirlian@nih.gov"),
+    archivePrefix = "arXiv",
+           eprint = "1801.03989",
+             year = "2018",
+     primaryClass = "stat.ME",
+              url = "https://arxiv.org/abs/1801.03989",
+      textVersion = 
+           paste("G. Izmirlian Jr (2018). ",
+                 "Average Power and lambda-power in Multiple Testing Scenarios when the " %,%
+                 "Benjamini-Hochberg False Discovery Rate Procedure is Used. ",
+                 "https://arxiv.org/abs/1801.03989", sep=""))
+
+ bibentry(bibtype = "Article",
+            title = "Strong consistency and asymptotic normality for quantities related " %,%
+                    "to the Benjamini-Hochberg false discovery rate procedure", 
+           author = person(family="Izmirlian Jr", given="Grant",email="grant.izmirlian@nih.gov"),
+          journal = "Statistics and Probability Letters", 
+             year = "2020",
+           volume = "160",
+      textVersion = 
+         paste("G. Izmirlian Jr (2020). ", 
+               "Strong consistency and asymptotic normality for quantities related " %,%
+               "to the Benjamini-Hochberg false discovery rate procedure. ",
+               "Statistics and Probability Letters 160.", sep=""))
+

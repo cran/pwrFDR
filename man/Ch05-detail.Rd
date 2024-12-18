@@ -20,18 +20,24 @@ detail(obj)
 \value{
   A list with components
   \item{reps}{A data frame of \code{n.sim} rows containing the results of 
-    the simulations as columns: \code{M1}, the \# of non-null distributed
-    statistics, \code{R}, the \# of statistical tests rejected under the
-    BH-FDR procedure, and \code{T}, the \# of true positives.
+    the simulations as columns: \code{M1}, the # of non-null distributed
+    statistics, \code{R}, the # of statistical tests rejected under the
+    BH-FDR procedure, and \code{T}, the # of true positives.
     Depending on the value of \code{FDP.control.method}, additional
     values are returned:\cr
     FDP.control.method:\cr
     "BHFDR": nothing further\cr
-    "BHCLT": In addition to \code{M1}, \code{R} and \code{T}, we compute
-    the \# tests rejected under the BH-CLT procedure, \code{R.st},
-    (see detail), \code{T.st}, \# non-null distributed tests rejected
-    under the BH-CLT procedure and if \code{sim.level}=2,
-    \code{R.st.ht}, and \code{T.st.ht}.
+    "BHFDX": In addition to \code{M1}, \code{R} and \code{T}, we compute
+             \code{R.st} and \code{T.st}, the # of tests rejected under
+             the BHFDX procedure, and among those tests rejected, the #
+	     of true positives.\cr
+   "Romano": In addition to \code{M1}, \code{R} and \code{T}, we compute
+             \code{R.R} and \code{T.R}, the # of tests rejected under
+	     Romano's procedure, and among those tests rejected, the #
+	     of true positives.\cr
+     "both": If 'both' is specified then counts of all rejected tests
+             and of true positive tests under BHFDX and under Romano
+             are returned along with those counts for BHFDr.    
   }
   \item{X}{A single simulation replicate of the \code{m} raw test
     statistics, included as a sanity check}

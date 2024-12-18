@@ -8,7 +8,7 @@
 }
 \usage{
 CDF.Pval.HA(u, effect.size, n.sample, r.1, groups = 2, type="balanced",
-            grpj.per.grp1=1, control)
+            grpj.per.grp1=1, distopt, control)
 }
 \arguments{
   \item{u}{
@@ -41,6 +41,11 @@ CDF.Pval.HA(u, effect.size, n.sample, r.1, groups = 2, type="balanced",
     groups, the group j to group 1 ratio, where group 1 is the group
     with the largest effect under the alternative hypothesis. 
   }
+  \item{distopt}{Test statistic distribution in among null and
+                 alternatively distributed sub-populations.
+		 distopt=0 gives normal (2 groups), distop=1 gives t- (2 groups)
+		 and distopt=2 gives F- (2+ groups)
+  }  
   \item{control}{
     Optionally, a list with components with the following components:
     'groups', used when distop=3 (F-dist), specifying number of groups. 
@@ -59,7 +64,7 @@ CDF.Pval.HA(u, effect.size, n.sample, r.1, groups = 2, type="balanced",
   of a test statistic under HA then the CDF of a P-value for a test
   statistic distributed under HA is
   
-  G_A(u) = Fc_A(Fc_0^{-1}(u))
+  \code{G_A(u) = Fc_A(Fc_0^{-1}(u))}
 
   The limiting true positive fraction is the infinite simultaneous tests
   average power,

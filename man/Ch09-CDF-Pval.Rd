@@ -12,7 +12,7 @@
 }
 \usage{
   CDF.Pval(u, effect.size, n.sample, r.1, groups=2, type="balanced",
-           grpj.per.grp1=1, control)
+           grpj.per.grp1=1, distopt, control)
 }
 \arguments{
   \item{u}{
@@ -45,19 +45,17 @@
     groups, the group j to group 1 ratio, where group 1 is the group
     with the largest effect under the alternative hypothesis. 
   }
+  \item{distopt}{Test statistic distribution in among null and
+                 alternatively distributed sub-populations.
+		 distopt=0 gives normal (2 groups), distop=1 gives t- (2 groups)
+		 and distopt=2 gives F- (2+ groups)
+  }  
   \item{control}{
     Optionally, a list with components with the following components:
     'groups', used when distop=3 (F-dist), specifying number of groups. 
     'tol' is a convergence criterion used in iterative methods
     which is set to 1e-8 by default
     'max.iter' is an iteration limit, set to 1000 by default
-    'distop', specifying the distribution family of the central and
-      non-centrally located sub-populations. =1 gives normal (2 groups)
-      =2 gives t- (2 groups) and =3 gives F- (2+ groups)    
-    'CS', correlation structure, for use only with 'method="simulation"'
-      which will simulate m simulatenous tests with correlations 'rho'
-      in blocks of size 'n.WC'. Specify as list
-      CS = list(rho=0.80, n.WC=50) for example
   }
 }
 \details{
@@ -69,7 +67,7 @@
   statistic under H0 and Fc_A is the cCDF of a test statistic
   under HA then the CDF of the P-values is
   
-  G(u) = (1-r) u  + r Fc_A(Fc_0^{-1}(u))
+  \code{G(u) = (1-r) u  + r Fc_A(Fc_0^{-1}(u))}
 
   The limiting positve call fraction, lim_m V_m/m = gamma (a.s.)
   is the solution to the equation 

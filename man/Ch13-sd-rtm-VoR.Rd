@@ -26,7 +26,7 @@
   Benjamini-Hochberg False Discovery Rate (BH-FDR) procedure. It
   ensures that the expected value of the FDP will be less than
   alpha, E[FDP] < alpha. The other two included FDP control methods,
-  "Romano" and "BHCLT", control the probability that the FDP exceeds
+  "Romano" and "BHFDX", control the probability that the FDP exceeds
   a given value, delta:
 
   \eqn{P( V_m/R_m > \delta ) < \alpha}
@@ -34,11 +34,11 @@
   In most cases, the choice \eqn{\delta=\alpha} is appropriate but
   \eqn{\delta} is a distinct parameter to allow greater flexibility.
   The choice "Auto" will select the most appropriate choice from the
-  three, BHFDR, BHCLT and Romano. If the asymptotic standard error,
+  three, BHFDR, BHFDX and Romano. If the asymptotic standard error,
   sd.rtm.VoR/m^0.5 is greater than a control parameter (default value
-  10\%), then one of the choices "BHCLT" or "Romano" will be made. As
+  10\%), then one of the choices "BHFDX" or "Romano" will be made. As
   the "Romano" FDP control method is more conservative, there is a
-  preference for the "BHCLT" method, which can be used if the number
+  preference for the "BHFDX" method, which can be used if the number
   of simultaneous tests, m, is larger than 50. All of this is
   handled internally within the function \code{pwrFDR}. These
   extractor functions exist to allow the user 'under the hood'. 
@@ -56,6 +56,10 @@
   Izmirlian G. (2017) Average Power and \eqn{\lambda}-power in
     Multiple Testing Scenarios when the Benjamini-Hochberg False
     Discovery Rate Procedure is Used. <arXiv:1801.03989>
+    
+  Kluger D. M., Owen A. B. (2023) A central limit theorem for the
+    Benjamini-Hochberg false discovery proportion under a factor model.
+    Bernoulli; xx:xxx-xxx.
 }
 \author{
   Grant Izmirlian <izmirlig at mail dot nih dot gov>
@@ -74,7 +78,7 @@
   ## Asymptotic standard deviation under BHFDR
   sdrtmVoRBHFDR  <- sd.rtm.VoR(rslt.BHFDR)
 
-  ## Asymptotic standard deviation under BHCLT
+  ## Asymptotic standard deviation under BHFDX
   sdrtmVoRAuto1 <- sd.rtm.VoR(rslt.Auto.1)
 
   ## Asymptotic standard deviation under Romano

@@ -13,7 +13,7 @@
 }
 \arguments{
   \item{object}{
-  An object of class ‘pwr’, which is the result of a call to \code{pwrFDR}
+  An object of class 'pwr', which is the result of a call to \code{pwrFDR}
   }
 }
 \value{
@@ -41,7 +41,7 @@
     analysis. Bioinformatics; 23:739-746.
 
   Lehmann E. L., Romano J. P.. Generalizations of the familywise error
-    rate. Ann. Stat.. 2005;33(3):1138–1154.
+    rate. Ann. Stat.. 2005;33(3):1138-1154.
 
   Romano Joseph P., Shaikh Azeem M.. Stepup procedures for control of
     generalizations of the familywise error rate. Ann. Stat..

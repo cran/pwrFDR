@@ -1,16 +1,16 @@
 \name{controlFDP}
 \alias{controlFDP}
 \title{
-  Helper function for the BHCLT FDP control method
+  Helper function for the BHFDX FDP control method
 }
 \description{
-  Helper function for the BHCLT FDP control method. Calculates
+  Helper function for the BHFDX FDP control method. Calculates
   a reduced FDR required to bound the the false discovery proportion
   in probability using asymptotic approximation.
 }
 \usage{
   controlFDP(effect.size, n.sample, r.1, alpha, delta, groups = 2, 
-    N.tests, type, grpj.per.grp1, control, formula, data) 
+    N.tests, type, grpj.per.grp1, corr.struct, control, formula, data, distopt) 
 }
 \arguments{
   \item{effect.size}{
@@ -29,7 +29,7 @@
   }
   \item{delta}{
     The exceedance thresh-hold for the FDP tail probability control method 
-    (BHCLT or Romano) \eqn{P\{ FDP > \delta \} < \alpha}. The default 
+    (BHFDX or Romano) \eqn{P\{ FDP > \delta \} < \alpha}. The default 
     value is \eqn{\alpha}.
   }
   \item{groups}{
@@ -51,28 +51,33 @@
     groups, the group j to group 1 ratio, where group 1 is the group
     with the largest effect under the alternative hypothesis. 
   }
+  \item{corr.struct}{Specifies a block correlation structure between test
+    statistics which is used in both the simulation routine, and in the
+    computations based upon asymptotic approximation, e.g. the AFDX
+    control and the ATPP method. Its form is specified via the following
+    named elements.\cr
+          "type": "CS-Blocks" for compound symmetry within blocks or 
+                  "Toeplitz-Blocks" for toeplitz within blocks.\cr
+    "block.size": the size of the correlated blocks
+           "rho": When type="CS-Blocks", then 'rho' is a correlation of length 1
+                  when type="Toeplitz-Blocks", then 'rho' is a vector of
+		  correlations of length 'block.size' - 1
+  }
   \item{control}{
     Optionally, a list with components with the following components:
-    'groups', used when distop=3 (F-dist), specifying number of groups. 
+    'groups', used when distop=3 (F-dist), specifying number of groups.\cr
     'tol' is a convergence criterion used in iterative methods
-          which is set to 1e-8 by default 
+          which is set to 1e-8 by default\cr 
     'max.iter' is an iteration limit, set to 20 for the iterated
-               function limit and 1000 for all others by default
-    'distop', specifying the distribution family of the central and
-              non-centrally located sub-populations. =1 gives normal (2
-	      groups)=2 gives t- (2 groups) and =3 gives F- (2+ groups)    
-    'CS', correlation structure, for use only with 'method="simulation"'
-          which will simulate m simulatenous tests with correlations 'rho'
-          in blocks of size 'n.WC'. Specify as list CS = list(rho=0.80,n.WC=50) 
-	  for example.
+               function limit and 1000 for all others by default\cr
     'sim.level' sim level 2 results in more detail at the expense of
-                slightly more computational time.
+                slightly more computational time.\cr
     'low.power.stop' in simulation option, will result in an error message if
              the power computed via FixedPoint method is too low, which
-             result in no solution for the BHCLT option. Default setting
-	     is TRUE. Set to FALSE to over-ride.
+             result in no solution for the BHFDX option. Default setting
+	     is TRUE. Set to FALSE to over-ride.\cr
     'FDP.meth.thresh' fine-tunes the 'Auto' voodoo (see above). Leave
-                     this alone.
+                     this alone.\cr
     'verb' vebosity level.
   }
   \item{formula}{Optionally, the function can be used to _estimate_ f*
@@ -84,6 +89,11 @@
   \item{data}{
     The name of the dataset.
   }
+  \item{distopt}{Test statistic distribution in among null and
+                 alternatively distributed sub-populations.
+		 distopt=0 gives normal (2 groups), distop=1 gives t- (2 groups)
+		 and distopt=2 gives F- (2+ groups)
+  }  
 }
 \details{
   Uses a CLT for the FDP to calculate a reduced alpha required to
@@ -118,6 +128,10 @@
   Izmirlian G. (2017) Average Power and \eqn{\lambda}-power in
     Multiple Testing Scenarios when the Benjamini-Hochberg False
     Discovery Rate Procedure is Used. <arXiv:1801.03989>
+
+  Kluger D. M., Owen A. B. (2023) A central limit theorem for the
+    Benjamini-Hochberg false discovery proportion under a factor model.
+    Bernoulli; xx:xxx-xxx.
 }
 \author{
   Grant Izmirlian <izmirlian at nih dot gov>

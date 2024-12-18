@@ -1,0 +1,43 @@
+1. Note that Holme's method can done by allowing FDP.control.method="Holme" and
+   then setting FDP.control.method="Romano" internally, with a delta less than 1/m. 
+   This is all accomplished at the top level.
+   Changes apply to
+   - pwrFDR
+   - pwrFDR.FP
+   - pwrFDR.sim
+   - argument checking block at bottom
+
+2. Hochberg's method can be included by allowing FDP.control.method="Hochberg" and
+   then setting internally to "Romano", delta set to 1/m - 1e-3 and then adding a 
+   a modification which does step-up instead of step down. The options must be
+   changed in the top level. Notice that the fixed point code will be up to date when
+   patch 1 is applied since there is no difference between step-down and step-up for
+   the class of distributions in use all of which are within the confines of testing
+   in a monotone likelihood class resulting in a concave P-value CDF. Only the simulation
+   code needs to be changed.   
+   Changes apply to
+   - pwrFDR
+   - pwrFDR.sim
+   - pwrFDRsim.fn
+   - pwrFDRsimCS.fn
+   - argument checking block at bottom
+
+   
+3. add bonferroni.
+   Add option FDP.control.method="Bonferroni". Options changed in the top level
+   Changes apply to
+   - pwrFDR
+   - pwrFDR.FP.1x
+   - pwrFDR.sim
+   - pwrFDRsim.fn
+   - pwrFDRsimCS.fn
+   - line 2692, flg.psi.expr <- ...
+   - argument checking block at bottom
+
+4. Fix input and output. Specification of power definition should follow the overall type I error control
+   syntax. Think about the scope of this re-design. Output should be streamlined as well. Currently, the
+   "Holme", "Hoch", and "Bonf" methods produce fixed point output in the one block format e.g. one set of
+   quantities corresponding to the desired type of overall type I error control, but the simulation code
+   outputs two blocks, one for the BH-FDR control and one for the Romano control, which will contain the
+   FWER control results when "Holme" or "Hochberg" is specified. 
+   

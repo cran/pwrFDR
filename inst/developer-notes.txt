@@ -1,0 +1,34 @@
+pwrFDR	top level:    + argument checking
+	    	      + default argument substitution where required
+	calls: * pwrFDR.th
+	       * pwrFDR.sim
+pwrFDR.th             + decides whether to invoke backsolving via optimizer
+		        (sample size required for power) or is this a
+			one-shot (power). Optimizer makes calls to the
+			one-shot power routine
+	calls: * pwrFDR.FP.1X
+	       * pwrFDR.BIN.1X
+pwrFDR.FP.1X          + the workhorse for computing avg pwr or TPX pwr
+		        for all procedures except for Bonferroni
+		 	(BHFDR, BHFDX, Romano, Holm & Hochberg)
+pwrFDR.BIN.1X 	      + the workhorse for computing avg pwr or TPX pwr
+			for the Bonferroni procedure. 
+pwrFDR.sim            + the workhorse for computing power for all procedures
+        calls  * pwrFDRsim.fn
+	       * pwrFDRsimCS.fn
+	       * pwrFDRsimBnf.fn
+pwrFDRsim.fn          + workorse for running simulations for all procedures
+		        under independence, except Bonferroni, recording, per
+			simulation replicate # rejected, # true positives,
+			# false positves, from whih can be computed avg pwr
+			and TPX pwr as well FDP and FDX
+pwrFDRsimCS.fn        + workorse for running simulations for all procedures
+		        under given correlation structure, except Bonferroni,
+			recording, per simulation replicate # rejected, # true
+			positives, # false positves, from whih can be computed
+			avg pwr and TPX pwr as well FDP and FDX
+pwrFDRsimBnf.fn       + workorse for running simulations for Bonferroni
+		        procedure under independence, recording, per simulation
+			replicate # rejected, # true positives, # false
+			positves, from whih can be computed avg pwr and TPX pwr
+			as well FDP and FDX

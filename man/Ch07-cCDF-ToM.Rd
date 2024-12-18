@@ -10,9 +10,9 @@
 \usage{
 cCDF.ToM(u, effect.size, n.sample, r.1, alpha, delta, groups = 2, N.tests,
          type = c("paired", "balanced", "unbalanced"), grpj.per.grp1 = NULL,
-         FDP.control.method = "BHFDR", control = list(tol = 1e-08,
-         max.iter = c(1000, 20), distopt = 1, CS = list(NULL), sim.level = 2,
-         low.power.stop = TRUE, FDP.meth.thresh = FDP.cntl.mth.thrsh.def, verb = FALSE))
+         FDP.control.method = "BHFDR", distopt, 
+         control=list(tol=1e-08,max.iter=c(1000,20),sim.level=2,low.power.stop=TRUE,
+                      FDP.meth.thresh=FDP.cntl.mth.thrsh.def,verb=FALSE))
 }
 \arguments{
   \item{u}{
@@ -36,7 +36,7 @@ cCDF.ToM(u, effect.size, n.sample, r.1, alpha, delta, groups = 2, N.tests,
     probability that the FDP exceeds delta (Romano case)
   }
   \item{delta}{
-    If the "FDP.control.method" is set to 'Romano' or 'BHCLT', then the
+    If the "FDP.control.method" is set to 'Romano' or 'BHFDX', then the
     user can set the exceedance thresh-hold for the FDP tail probability
     control \eqn{P\{ FDP > \delta \} < \alpha}. The default value is
     \eqn{\alpha}.
@@ -66,56 +66,53 @@ cCDF.ToM(u, effect.size, n.sample, r.1, alpha, delta, groups = 2, N.tests,
     controlled. You may specify the whole word or any shortened uniquely
     identifying truncation. \cr
      "BHFDR": the usual BH-FDR \cr
-     "BHCLT": use asymptotic approximation to the distribution of the FDP 
+     "BHFDX": use asymptotic approximation to the distribution of the FDP 
               to find a smaller FDR which guarantees probability less
               than alpha that the FDP exceeds alpha. \cr
     "Romano": use Romano's method which guarantees probability less than 
               alpha that the FDP exceeds alpha. \cr
       "Auto": in 'FixedPoint' mode, the program will use its own 
               wisdom to determine which choice above to make. The 
-              order of conservatism is Romano > BHCLT > BHFDR, but 
+              order of conservatism is Romano > BHFDX > BHFDR, but 
               BHFDR offers only expected control while the other two 
               guarantee bounds on the excedance probabilty. If the 
 	      distribution of the FDP is nearly degenerate, then BHFDR 
 	      is the best option. Otherwise, if it can be reliably used, 
-              BHCLT would be the best choice. The 'effective' denominator, 
+              BHFDX would be the best choice. The 'effective' denominator, 
 	      gamma*N.tests, in the CLT determines when the approximation 
 	      is good enough and the asymptotic standard error of the FDP 
 	      determines when the distribution is dispersed enough to matter.
               Use "Auto" to run through these checks and determine the best. 
               A return argument, 'Auto', displays the choice made. See 
               output components and details. \cr
-      "both": in 'simulation' mode, compute statistics R and T under BHCLT
+      "both": in 'simulation' mode, compute statistics R and T under BHFDX
               and Romano (in addition to BHFDR). Corresponding
-	      statistics are denoted R.st, T.st corresponding to BHCLT
+	      statistics are denoted R.st, T.st corresponding to BHFDX
 	      control of the FDP, and R.R and T.R corresponding to
 	      Romano control of the FDP. If sim.level is set to 2,
 	      (default) the statistics R.st.ht and T.st.ht, which are
-	      the number rejected and number true positives under BHCLT
+	      the number rejected and number true positives under BHFDX
 	      where r_0 = 1-r_1, gamma, and alpha.star have been estimated 
 	      from the P-value data and then alpha.star computed from
               these.
   }
+  \item{distopt}{Test statistic distribution in among null and
+                 alternatively distributed sub-populations.
+		 distopt=0 gives normal (2 groups), distop=1 gives t- (2 groups)
+		 and distopt=2 gives F- (2+ groups)
+  }  
   \item{control}{Optionally, a list with components with the following  
                  components: \cr
            'tol' is a convergence criterion used in iterative 
-   	         methods which is set to 1e-8 by default.
+   	         methods which is set to 1e-8 by default.\cr
 	   'max.iter' is an iteration limit, set to 20 for the iterated
-	         function limit and 1000 for all others by default.
-	   'distop', specifying the distribution family of the central
-	         and non-centrally located sub-populations. distopt=1
-		 gives normal (2 groups), distop=2 gives t- (2 groups)
-		 and distopt=3 gives F- (2+ groups) \cr
-	   'CS', correlation structure, for use only with 'method="simulation"'  
-	         which will simulate m simulatenous tests with correlations 
-                 'rho' in blocks of size 'n.WC'. Specify as a list
-		 CS = list(rho=0.80,n.WC=50) for example.  \cr
+	         function limit and 1000 for all others by default.\cr
 	   'sim.level' sim level 2 (default) stipulates, when FDP.control.method
-	         is set to "BHCLT", or "both", R.st.ht and T.st.ht are
+	         is set to "BHFDX", or "both", R.st.ht and T.st.ht are
 	         computed in addition to R.st and T.st (see above). \cr
            'low.power.stop' in simulation option, will result in an error message 
    	         if the power computed via FixedPoint method is too low, which 
-	         result in no solution for the BHCLT option. Default setting is TRUE. 
+	         result in no solution for the BHFDX option. Default setting is TRUE. 
 	         Set to FALSE to over-ride this behavior. \cr
            'FDP.meth.thresh' fine-tunes the 'Auto' voodoo (see above). Leave 
 	         this alone. \cr
@@ -142,12 +139,16 @@ cCDF.ToM(u, effect.size, n.sample, r.1, alpha, delta, groups = 2, N.tests,
   Jung S-H. (2005) Sample size for FDR-control in microarray data
     analysis. Bioinformatics; 21:3097-3104.
   
+  Kluger D. M., Owen A. B. (2023) A central limit theorem for the
+    Benjamini-Hochberg false discovery proportion under a factor model.
+    Bernoulli; xx:xxx-xxx.
+
   Liu P. and Hwang J-T. G. (2007) Quick calculation for sample size while
     controlling false discovery rate with application to microarray
     analysis. Bioinformatics; 23:739-746.
 
   Lehmann E. L., Romano J. P.. Generalizations of the familywise error
-    rate. Ann. Stat.. 2005;33(3):1138–1154.
+    rate. Ann. Stat.. 2005;33(3):1138-1154.
 
   Romano Joseph P., Shaikh Azeem M.. Stepup procedures for control of
     generalizations of the familywise error rate. Ann. Stat..

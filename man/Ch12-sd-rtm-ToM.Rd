@@ -40,7 +40,7 @@
   
   This package uses asymptotic approximation to derive the tp-TPP
   ensemble power under any one of the avaialbe FDP control methods,
-  BHFDR, BHCLT or Romano.
+  BHFDR, BHFDX or Romano.
 }
 \value{
   Returns the asymptotic standard deviation of the true postive 
@@ -55,6 +55,10 @@
   Izmirlian G. (2017) Average Power and \eqn{\lambda}-power in
     Multiple Testing Scenarios when the Benjamini-Hochberg False
     Discovery Rate Procedure is Used. <arXiv:1801.03989>
+    
+  Kluger D. M., Owen A. B. (2023) A central limit theorem for the
+    Benjamini-Hochberg false discovery proportion under a factor model.
+    Bernoulli; xx:xxx-xxx.
 }
 \author{
   Grant Izmirlian <izmirlig at mail dot nih dot gov>
@@ -73,7 +77,7 @@
   ## Asymptotic standard deviation under BHFDR
   sdrtmToMBHFDR  <- sd.rtm.ToM(rslt.BHFDR)
 
-  ## Asymptotic standard deviation under BHCLT
+  ## Asymptotic standard deviation under BHFDX
   sdrtmToMAuto1 <- sd.rtm.ToM(rslt.Auto.1)
 
   ## Asymptotic standard deviation under Romano
