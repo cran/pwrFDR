@@ -1,5 +1,5 @@
 Package: pwrFDR
-Version: 3.2.2
+Version: 3.2.4
 Title: FDR Power
 Authors@R: person("Grant", "Izmirlian", role=c("aut", "cre"),
                   email="izmirlig@mail.nih.gov")
@@ -35,8 +35,8 @@ Description: Computing Average and TPX Power under various BHFDR type sequential
 License: GPL (>= 2)
 LazyLoad: yes
 NeedsCompilation: no
-Packaged: 2024-12-18 16:31:02 UTC; izmirlig
+Packaged: 2025-01-14 05:06:47 UTC; izmirlig
 Author: Grant Izmirlian [aut, cre]
 Maintainer: Grant Izmirlian <izmirlig@mail.nih.gov>
 Repository: CRAN
-Date/Publication: 2024-12-18 17:00:02 UTC
+Date/Publication: 2025-01-14 17:10:02 UTC

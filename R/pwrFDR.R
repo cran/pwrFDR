@@ -5,8 +5,9 @@
          method=c("Theoretical", "simulation"), n.sim=1000, temp.file,
          control=list(tol=1e-8, max.iter=c(1000,20), sim.level=2,
              low.power.stop=TRUE, FDP.meth.thresh=FDP.cntl.mth.thrsh.def,
-                      ast.le.a=TRUE, verb=FALSE, show.footer=FALSE))
+                      ast.le.a=TRUE, verb=FALSE, show.footer=TRUE))
 {
+    pct <- function(x, dig=2) format(round(10^dig*100*x)/10^dig) %,% "%"
     
     .call. <- m <- match.call()
     pfx <- as.character(m[[1]])
@@ -24,59 +25,79 @@
 
     m$method <- m$temp.file <- NULL 
 
-    args.full <- evald.call
-    args.full[[1]] <- as.name("list")
-    args.full <- eval(args.full)
-    args.full$call <- evald.call
-
-    verb <- args.full$control$verb
+    args.out <- evald.call
+    args.out[[1]] <- as.name("list")
+    args.out <- eval(args.out)
+    args.out$call <- evald.call
+    
+    verb <- args.out$control$verb
     if(verb>=3) browser()
 
+    fdpcmthd.spcd <- args.out$FDP.control.method
+    
     out <- eval(m)
-
+    
     if(verb>=2) browser()
 
-    fdpcmthd.spcd <- attr(out,"passback")$FDP.control.method
-    fdpcmthd.spcd <- ifelse(is.null(fdpcmthd.spcd), "BHFDR", fdpcmthd.spcd)
-    FDP.control.method <- ifelse(sfx=="th", fdpcmthd.spcd, args.full$FDP.control.method)
+    ## fdpcmthd.spcd <- attr(out,"passback")$FDP.control.method
+    ## fdpcmthd.spcd <- ifelse(is.null(fdpcmthd.spcd), "BHFDR", fdpcmthd.spcd)
+    FDP.control.method.final <- ifelse(fdpcmthd.spcd!="Auto", fdpcmthd.spcd, out$Auto)
 
     dtl <- attr(out, "detail")
     
     if(verb>=1) browser()
     
-    msng <- as.list(args.full$control$is.msng)
+    is.Auto <- !is.null(out$Auto)
+    is.BHFDR <- FDP.control.method.final == "BHFDR"
+    is.BHFDX <- FDP.control.method.final == "BHFDX" || FDP.control.method.final=="both"
+    is.Romano <- FDP.control.method.final == "Romano" || FDP.control.method.final=="both"
+    is.Bonferroni <- FDP.control.method.final == "Bonferroni"
+    is.Holm <- FDP.control.method.final == "Holm"
+    is.Hochberg <- FDP.control.method.final == "Hochberg"
+    is.pTPX <- !is.null(args.out$lambda)
+    is.sim <-  substring(args.out$call$method,1,3)=="sim"
+    is.n <- !is.null(args.out$n.sample)
+
+    msng <- as.list(args.out$control$is.msng)
     
     ## add N.tests to the position 5 of the output list if available
-    N.tests <- ifelse(msng$N.tests, Inf, args.full$N.tests)
-    out <- append(out, list(N.tests=N.tests), after=4)
+    N.tests <- ifelse(msng$N.tests, Inf, args.out$N.tests)
+    out <- append(out, list(N.tests=N.tests))
     
     ## when calculating sample size, effect.size, r.1 or alpha, then we must add
     ## n.sample, effect.size, r.1 and alpha manually to the head of the output list.
     if(msng$average.power && msng$TPX.power)
-        out <- append(out, with(args.full, list(n.sample=n.sample, effect.size=effect.size, r.1=r.1, alpha=alpha)), 0)
+        out <- append(out, with(args.out, list(n.sample=n.sample, effect.size=effect.size, r.1=r.1, alpha=alpha)))
 
-    args.out <- args.full
-    is.Auto <- !is.null(out$Auto)
- 
-    is.BHFDX <- FDP.control.method == "BHFDX"
-    is.Romano <- FDP.control.method == "Romano"
-    is.Bonferroni <- FDP.control.method=="Bonferroni"
-    is.Holm <- FDP.control.method=="Holm"
-    is.Hochberg <- FDP.control.method=="Hochberg"
-    is.pTPX <- !is.null(args.out$lambda)
-    is.sim <-  substring(args.out$call$method,1,3)=="sim"
-    is.n <- !is.null(args.out$n.sample)
-    
-    pwr.type <- c(" average power ", " pTPX power ")[is.pTPX+1]
-    pwr <- round(100*c(out$average.power, out$TPX.power)[is.pTPX+1],1)%,%"%"
+    if(!is.pTPX) out$lambda <- out$TPX.power <- out$TPX.power.st <- out$TPX.power.R <- NA
+    if(is.pTPX && is.null(out$lambda)) out$lambda <- args.out$lambda
+##  vals.tpx <- list(TPX.power=NA, TPX.power.st=NA, TPX.power.R=NA, lambda=NA)
+##  if(is.pTPX)
+##  {
+##      val.tpx <- ifelse(msng$TPX.power, out$TPX.power, args.out$call$TPX.power)
+##      val.lmbd <- args.out$lambda
+##      vals.tpx <- list(val.tpx, val.lmbd)
+##      names(vals.tpx) <- c("TPX.power", "lambda")
+##  }
+##  out <- append(out, vals.tpx)
+
+    ## construct the footer attribute
+    ## and include additional components for 'out' either specified in call
+    ## or computed from simulation reps. Also, for simulation method, move the
+    ## appropriate '.R' (Romano) or '.st' (BHFDX) quantities into the un-dotted quantity
+    ## and then remove them from the 'out' list. 
     n.smp <- ifelse(!is.n, out$n.sample, args.out$n.sample)
 
+    if(missing(delta)) delta <- alpha
+    
+    sfx <- ifelse(delta!=alpha, ", delta=" %,% pct(args.out$delta, dig=1), ".")
+    
     cntl.type <- " BH-FDR control"
     if(is.BHFDX)
-        cntl.type <-" pFDX control, alpha=delta="%,%(100*round(args.out$delta,4))%,%"%"
+        cntl.type <-" BHFDX control, alpha=" %,% pct(args.out$alpha, dig=1) %,% sfx
 
-     if(is.Romano)
-        cntl.type <- " Romano FDX control"
+    if(is.Romano)
+        cntl.type <- " Romano FDX control, alpha=" %,% pct(args.out$alpha, dig=1) %,% sfx
 
     if(is.Bonferroni)
         cntl.type <-" Bonferroni FWER control"
@@ -87,78 +108,66 @@
     if(is.Hochberg)
         cntl.type <-" Hochberg FWER control"
 
-    footer <- c("","Sample size of "%,% n.smp %,%" required for "%,%pwr.type%,% pwr%,% 
-                   " under" %,% cntl.type %,% ".")
-
-    if(is.BHFDX)
-      footer <- c(footer, 
-              "NOTE:" %,% cntl.type %,% " is guaranteed if BH-FDR is applied at alpha=" %,%
-              round(out$alpha.star,4))
-    
-    attr(out, "arg.vals") <- args.out
-    show.footer <- control$show.footer
-    if(is.null(show.footer))show.footer <- FALSE
-    if(show.footer) attr(out, "footer") <- sprintf("%s",footer)
-    class(out) <- "pwrFDR"
-    out$call <- .call.
-    
+    if(is.Auto)
+    {
+        cntl.type <- out$Auto
+        out$Auto <- NULL
+    }
+       
     out.sv <- out
-    args <- arg.vals(out)
-    msng <- as.list(args$control$is.msng)
+
     is.Ntst <- !msng$N.tests
     is.FDPcnt <- !msng$FDP.control.method
     
-    vals.tpx <- NULL
-    if(is.pTPX)
-    {
-        val.tpx <- ifelse(msng$TPX.power, out$TPX.power, args$call$TPX.power)
-        val.lmbd <- arg.vals(out)$lambda
-        vals.tpx <- list(val.tpx, val.lmbd)
-        names(vals.tpx) <- c("TPX.power", "lambda")
-    }
-    nms.sigma <- list(c("sigma.rtm.Rom","sigma.rtm.VoR", "sigma.rtm.ToM"),
-                      c("se.Rom","se.VoR", "se.ToM"))[[1+is.Ntst]]
-    
-    nms.reord.1 <- c("call", "N.tests","r.1","n.sample","effect.size","alpha")
-    
-    if(is.sim) nms.reord.3 <- c("emp.FDR", "average.power", "gamma", nms.sigma)
-    if(!is.sim) nms.reord.3 <- c("average.power", "gamma", nms.sigma)
-    
-    ind <- which(c(nms.reord.1,nms.reord.3)==c("alpha","emp.FDR")[1+is.sim])
-
-    out <- out[c(nms.reord.1, nms.reord.3)]
-    
-    if(is.pTPX)
-        out <- append(out, vals.tpx, ind)
-
     cntl.n.vals <- c(`BHFDR`=1, `BHFDX`=2, `Romano`=3, `Hochberg`=4, `Holm`=5, `Bonferroni`=6)
     
-    cntl <- FDP.control.method
+    ##    cntl <- FDP.control.method
+    cntl <- FDP.control.method.final
+    
     if(cntl=="both") cntl <- "BHFDX"
     cntl.val <- cntl.n.vals[cntl]
     
-    ind <- which(names(out)==c("alpha","emp.FDR")[1+is.sim])
-    out <- switch(cntl,
-                  BHFDR = append(out, list(FDP.cnt=cntl.val), ind),
-                  BHFDX = append(out, list(FDP.cnt=cntl.val, delta=args$delta, alpha.star=out.sv$alpha.st), ind),
-                  Romano = append(out, list(FDP.cnt=cntl.val), ind),
-                  Bonferroni = append(out, list(FDP.cnt=cntl.val), ind),
-                  Holm = append(out, list(FDP.cnt=cntl.val), ind),
-                  Hochberg = append(out, list(FDP.cnt=cntl.val), ind))
+##  ind <- which(names(out)==c("alpha","emp.FDR")[1+is.sim])
 
-    attr(out,"arg.vals") <- args
-
+    out <- append(out, list(FDP.control=cntl.val,
+                            delta=ifelse(is.Romano||is.BHFDX, delta, NA)))
+                            
+    out$alpha.star <- ifelse(!is.null(out.sv$alpha.st), out.sv$alpha.st, NA)
+    
+    out$emp.FDR <- ifelse(!is.null(out.sv$emp.FDR), as.double(out.sv$emp.FDR), NA)
+    out$emp.FDX <- ifelse(!is.null(out.sv$emp.FDX), as.double(out.sv$emp.FDX), NA)
+    out$method <- c(`Theoretical`=1, `simulation`=2)[args.out$method]
     ## Deterimines the content for the main output for the print method
     ## There's only one possibility for all choices and all methods except
     ## the simulation method for which FDP.control.method="both" is an option
     ## which computes both the BHFDX and the Romano methods. Everything is
     ## in the reps component of the detail attribute, but the components of
     ## the result in this case (FDP.control.method="both") will 
-    is.BHFDX <- is.BHFDX || (args$FDP.control.method=="both")
+    ## is.BHFDX <- is.BHFDX || (args.out$FDP.control.method=="both")
+
+    out$average.power.st <- 
+    out$emp.FDR.st <-
+    out$emp.FDX.st <- 
+    out$gamma.st <- 
+    out$se.Rom.st <- 
+    out$se.VoR.st <- 
+    out$se.ToM.st <- 
+    out$TPX.power.st <- NULL
+
+    out$average.power.R <- 
+    out$emp.FDR.R <-
+    out$emp.FDX.R <-         
+    out$gamma.R <- 
+    out$se.Rom.R <- 
+    out$se.VoR.R <- 
+    out$se.ToM.R <- 
+    out$TPX.power.R <- NULL
+
     if(is.sim && is.BHFDX)
     {
         out$average.power <- out.sv$average.power.st
         out$emp.FDR <- out.sv$emp.FDR.st
+        out$emp.FDX <- out.sv$emp.FDX.st
         out$gamma <- out.sv$gamma.st
         out$se.Rom <- out.sv$se.Rom.st
         out$se.VoR <- out.sv$se.VoR.st
@@ -169,13 +178,40 @@
     {
         out$average.power <- out.sv$average.power.R
         out$emp.FDR <- out.sv$emp.FDR.R
+        out$emp.FDX <- out.sv$emp.FDX.R
         out$gamma <- out.sv$gamma.R
         out$se.Rom <- out.sv$se.Rom.R
         out$se.VoR <- out.sv$se.VoR.R
         out$se.ToM <- out.sv$se.ToM.R
         out$TPX.power <- out.sv$TPX.power.R
     }
-    class(out) <- class(out.sv)
+    
+    pwr.type <- c(" average power ", " pTPX power ")[is.pTPX+1]
+    
+    pwr <- pct(c(out$average.power, out$TPX.power)[is.pTPX+1], dig=1)
+
+    lmbda <- NULL
+    if(is.pTPX) lmbda <- ", lambda=" %,% out$lambda
+
+    footer <- c("","Sample size of "%,% n.smp %,%" per group gives " %,% pwr.type %,% pwr %,%
+                   lmbda %,% " under " %,% cntl.type )
+
+    if(is.Romano)
+        footer <- c(footer, "NOTE: P( FDP > " %,% delta %,% " ) < " %,% alpha %,%" is guaranteed.")
+    
+    if(is.BHFDX)
+      footer <- c(footer, 
+              "NOTE: P( FDP > " %,% delta %,% " ) < " %,% alpha %,%" is guaranteed if BH-FDR is applied at alpha=" %,%
+              round(out$alpha.star,4))
+    
+    show.footer <- args.out$control$show.footer
+    if(is.null(show.footer))show.footer <- FALSE
+    if(show.footer) attr(out, "footer") <- sprintf("%s",footer)
+
+    out$call <- .call.
+    class(out) <- "pwrFDR"
+    
+    attr(out, "arg.vals") <- args.out
     attr(out, "detail") <- dtl
     out
 }
@@ -432,7 +468,6 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests,
          corr.struct, FDP.control.method, distopt, method, n.sim, temp.file, control)
 {
     .call. <- m <- m.sv <- match.call()
-
     use.Hlm.Hch <- FDP.control.method %in% c("Holm","Hochberg")
     if(use.Hlm.Hch)
     {
@@ -669,7 +704,6 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests,
       out$L.eq <- L.eq
     }
     attr(out, "passback") <- list(pars=list(pars0=pars0,pars1=pars1), FDP.control.method=FDP.control.method)
-    
     out
 }
 
@@ -865,12 +899,13 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests, lambda, type
     reps <- data.frame(M1=rslt$M1, R=rslt$R, T=rslt$T)
     average.power <- with(reps, mean(T %over% M1))
     emp.FDR <- with(reps, mean((R-T) %over% R))
+    emp.FDX <- with(reps, mean(((R-T) %over% R) > delta))
     gamma <- with(reps, mean(R)/N.tests)
     se.Rom <- with(reps, var.0(R/N.tests)^0.5)
     se.VoR <- with(reps, var.0((R - T) %over% R)^0.5)
     se.ToM <- with(reps, var.0(T %over% M1)^0.5)
-    out <- list(average.power=average.power, emp.FDR=emp.FDR, gamma=gamma,
-                se.Rom=se.Rom, se.VoR=se.VoR, se.ToM=se.ToM)
+    out <- list(average.power=average.power, emp.FDR=emp.FDR, emp.FDX=emp.FDX,
+                gamma=gamma, se.Rom=se.Rom, se.VoR=se.VoR, se.ToM=se.ToM)
     if(do.TPX.power)
     {
       TPX.power <- with(reps, mean(T %over% M1 >= lambda))
@@ -884,21 +919,20 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests, lambda, type
       out <- append(out, out.apnd, after=ind.avgpwr-1)
     }
     
-    se.VoR.st <- se.ToM.st <- se.VoR.st.ht <- se.ToM.st.ht <- se.VoR.R <-
-        se.ToM.R <- NULL
+    se.VoR.st <- se.ToM.st <- se.VoR.R <- se.ToM.R <- NULL
     if(BHFDX.lvl >= 1)
     {
       reps <- cbind(reps, R.st=rslt$R.st, T.st=rslt$T.st)
       average.power.st <- with(reps, mean(T.st %over% M1))
       emp.FDR.st <- with(reps, mean((R.st-T.st) %over% R.st))
-      P.st <- with(reps, mean((R.st - T.st) %over% R.st > alpha))
+      emp.FDX.st <- with(reps, mean((R.st - T.st) %over% R.st > delta))
       se.Rom.st <-  with(reps, var.0(R.st/N.tests)^0.5)
       se.VoR.st <- with(reps, var.0((R.st - T.st) %over% R.st)^0.5)
       se.ToM.st <- with(reps, var.0(T.st %over% M1)^0.5)
       gamma.st <- with(reps, mean(R.st)/N.tests)
       out <- c(out, average.power.st=average.power.st, emp.FDR.st=emp.FDR.st,
-               gamma.st=gamma.st, se.Rom.st=se.Rom.st, se.VoR.st=se.VoR.st,
-               se.ToM.st=se.ToM.st, alpha.star=alpha.st)
+               emp.FDX.st=emp.FDX.st, gamma.st=gamma.st, se.Rom.st=se.Rom.st,
+               se.VoR.st=se.VoR.st, se.ToM.st=se.ToM.st, alpha.star=alpha.st)
       if(do.TPX.power)
       {
         TPX.power.st <- with(reps, mean(T.st %over% M1 >= lambda))
@@ -922,13 +956,14 @@ function(effect.size, n.sample, r.1, alpha, delta, groups, N.tests, lambda, type
       reps <- cbind(reps, R.R=rslt$R.R, T.R=rslt$T.R)
       average.power.R <- with(reps, mean(T.R %over% M1))
       emp.FDR.R <- with(reps, mean((R.R-T.R) %over% R.R))
-      P.R <- with(reps, mean((R.R - T.R) %over% R.R > alpha))
+      emp.FDX.R <- with(reps, mean((R.R - T.R) %over% R.R > delta))
       se.Rom.R <-  with(reps, var.0(R.R/N.tests)^0.5)
       se.VoR.R <- with(reps, var.0((R.R - T.R) %over% R.R)^0.5)
       se.ToM.R <- with(reps, var.0(T.R %over% M1)^0.5)
       gamma.R <- with(reps, mean(R.R)/N.tests)
       out <- c(out, average.power.R=average.power.R, emp.FDR.R=emp.FDR.R,
-               gamma.R=gamma.R,se.Rom.R=se.Rom.R, se.VoR.R=se.VoR.R, se.ToM.R=se.ToM.R)
+               emp.FDX.R=emp.FDX.R, gamma.R=gamma.R,se.Rom.R=se.Rom.R,
+               se.VoR.R=se.VoR.R, se.ToM.R=se.ToM.R)
       if(do.TPX.power)
       {
         TPX.power.R <- with(reps, mean(T.R %over% M1 >= lambda))
@@ -2366,8 +2401,8 @@ function(u, effect.size, n.sample, r.1, alpha, delta, groups=2, N.tests,
   if(FDP.control.method=="Romano") do.R <- TRUE
   if(FDP.control.method=="Auto")
   {
-      if(names(avgpwr$FDP.cnt)=="BHFDX") do.bhclt <- TRUE
-      if(names(avgpwr$FDP.cnt)=="Romano") do.R <- TRUE
+      if(names(avgpwr$FDP.control)=="BHFDX") do.bhclt <- TRUE
+      if(names(avgpwr$FDP.control)=="Romano") do.R <- TRUE
   }
   alpha. <- alpha
   psi.o.gma <- 1
@@ -2423,6 +2458,13 @@ function(prfx="temp", sfx=".txt")
     alphanum <- c(letters, toupper(letters), 0:9)
     n <- length(alphanum)
     prfx %,% paste(alphanum[sample(n, 5)], collapse="") %,% sfx
+}
+
+"AsNmrcA" <-
+function(x)
+{
+  d <- dim(x)
+  matrix(as.numeric(as.matrix(x)), d[1], d[2])
 }
 
 "print.pwrFDR" <-
@@ -2492,26 +2534,80 @@ function(x, cptn=NULL, ...)
 function(...)
 {
     m <- match.call(expand.dots=TRUE)
-    n.args <- length(m) - 1    ## 4
+    verb <- arg.vals(eval(m[[2]], sys.parent()))$control$verb
+    if(verb==-1) browser()
+    base.row.nms <- c("method", "FDP.control", "alpha", "delta", "N.tests", "r.1", "effect.size", "alpha.star",
+                      "emp.FDR", "emp.FDX", "gamma")
+    pwr.nms <- c("average.power", "lambda", "TPX.power")
+    cand.row.nms <- cbind(c(base.row.nms, "sigma.rtm.Rom", "sigma.rtm.VoR", "sigma.rtm.ToM", "n.sample", pwr.nms),
+                          c(base.row.nms, "se.Rom", "se.VoR", "se.ToM", "n.sample", pwr.nms))
+    n.args <- length(m) - 1 
     tbl.lst <- list()
     cls <- NULL
-    nc <- NULL
-    for(k in 1:n.args)  ## 1:4
+    msng.rows <- NULL
+    for(k in 1:n.args) 
     {
       tbl.lst[[k]] <- eval(m[[k+1]], sys.parent())
       cls <- c(cls, class(tbl.lst[[k]]))
-      nc <- c(nc, length(tbl.lst[[k]]))
+      miss.1 <- any(unlist(sapply(cand.row.nms[,1], FUN=function(x,y)!(x %in% y), y=names(tbl.lst[[k]]))))
+      miss.2 <- any(unlist(sapply(cand.row.nms[,2], FUN=function(x,y)!(x %in% y), y=names(tbl.lst[[k]]))))
+      msng.rows <- c(msng.rows, miss.1 && miss.2)
     }
-    bad <- any(cls!="pwrFDR") || (length(unique(nc))>1)
-    if(bad)stop("All arguments must be of class 'pwrFDR' and of the same length")
+    bad <- any(cls!="pwrFDR") || any(msng.rows)
+    if(bad)stop("All arguments must be of class 'pwrFDR'")
+
     TBL <- AsDataFrame_pwrFDR(tbl.lst[[1]])
 
-    if(n.args>1)
-    for(k in 2:n.args)
-      TBL <- cbind(TBL, AsDataFrame_pwrFDR(tbl.lst[[k]])[,2])
+    par.nms <- TBL[,1]
+    is.se <- 1*("se.Rom" %in% par.nms)
+    row.nms <- cand.row.nms[,1+is.se]
+
+    show.row.inds <- unlist(sapply(row.nms, FUN=function(x,y)which(x==y), y=par.nms))
+    TBL <- TBL[show.row.inds,]
+
+    is.missing <- TBL[,2]=="."
     
+    if(n.args>1)
+      for(k in 2:n.args)
+      {
+        tbl.k <- AsDataFrame_pwrFDR(tbl.lst[[k]])
+        par.nms <- tbl.k[,1]
+        is.se.k <- 1*("se.Rom" %in% par.nms)
+        is.se <- c(is.se, is.se.k)
+        row.nms <- cand.row.nms[,1+is.se.k]
+        
+        show.row.inds <- unlist(sapply(row.nms, FUN=function(x,y)which(x==y), y=par.nms))
+        is.missing <- is.missing & (tbl.k[show.row.inds, 2] == ".")
+        TBL <- cbind(TBL, tbl.k[show.row.inds, 2])
+      }
+
+    TBL <- TBL[!is.missing, ]
+
+    mixed <- length(unique(is.se))>1
+
+    if(mixed)
+    {
+      se.rows <- which(TBL$Parameter %in% c("se.Rom","se.VoR","se.ToM") | TBL$Parameter %in%
+                         c("sigma.rtm.Rom","sigma.rtm.VoR","sigma.rtm.ToM"))
+      se.cols <- 1 + which(is.se==1)
+      ntst.row <- which(TBL$Parameter=="N.tests")
+      tbl <- as.data.frame(unclass(TBL))
+      as.num <- list(as.numeric, AsNmrcA)[[1 + (length(se.cols) > 1)]]
+      TBL[se.rows, se.cols] <-
+          format(t(t(as.num(tbl[se.rows, se.cols]))*as.numeric(tbl[ntst.row, se.cols])^0.5),
+                 digits=3)
+          
+      TBL$Parameter[se.rows] <- c("sigma.rtm.Rom", "sigma.rtm.VoR", "sigma.rtm.ToM")
+    }
+
     names(TBL)[2:(n.args+1)] <- "result " %,% letters[1:n.args]
     class(TBL) <- "join.pwrFDR"
+
+    base.row.nms <- c("method", "FDP.control", "alpha", "delta", "N.tests", "r.1", "effect.size", "alpha.star",
+                      "emp.FDR", "emp.FDX", "gamma")
+    pwr.nms <- c("average.power", "lambda", "TPX.power")
+    cand.row.nms <- cbind(c(base.row.nms, "sigma.rtm.Rom", "sigma.rtm.VoR", "sigma.rtm.ToM", "n.sample", pwr.nms),
+                          c(base.row.nms, "se.Rom", "se.VoR", "se.ToM", "n.sample", pwr.nms))    
     TBL
 }
 
@@ -2548,8 +2644,6 @@ function(x, cptn=NULL, ...)
 AsDataFrame_pwrFDR <-
 function(x)
 {
-    verb <- arg.vals(x)$control$verb
-    if(verb>=3) browser()
     .call. <- x$call
     ind.call <- which(names(x)=="call")
     x <- x[-ind.call]
@@ -2558,39 +2652,18 @@ function(x)
     vals <- vals.sv <- TBL$Value
     nms.vals <- TBL$Parameter
 
-    is.inf <- abs(vals)==Inf
-    idx.inf <- which(is.inf)
-    any.inf <- any(is.inf)
-    if(any.inf) nms.vals <- nms.vals[-idx.inf]
-    
-    vals <- vals[as.numeric(sapply(nms.vals, FUN=\(x, y)which(x==y), y=TBL$Parameter))]
-    vals <- sapply(vals, 
-                        function(x){
-                          is.char <- 1*is.character(x)
-                          idx <- is.int <- 0
-                          if(!is.char)
-                          {
-                            is.int <- 2*(abs(x)-floor(x) < 1e-12)
-                            idx <- (!is.int)*(3*(x-floor(x) <= 1e-3) + 4*(x-floor(x) > 1e-3))
-                          }
-                          idx <- is.char + is.int + idx
-                          lbl <- c("char", "int","sci","dec")[idx]
-                          int.expr <- as.call(expression(format, floor(x)))
-                          sci.expr <- as.call(expression(format, x, scientific=TRUE, digits=4))
-                          dec.expr <- as.call(expression(format, round(x, 4)))
-                          switch(lbl,
-                                 char=x,
-                                 int=eval(int.expr),
-                                 sci=eval(sci.expr),
-                                 dec=eval(dec.expr))
-                        })
-    if(any.inf) vals <- append(vals, vals.sv[idx.inf], idx.inf-1)
+    vals <- vals[as.numeric(sapply(nms.vals, FUN=\(x, y)which(x==y)[1], y=TBL$Parameter))]
+    vals <- sapply(vals, format, digits=3)
+    vals[substring(vals, 1, 2) == "NA"] <- "."
+
     TBL$Value <- unlist(vals)
 
     ## translate the FDP.control.method from numeric back to character
     cntl.nms <- c(`1`="BHFDR", `2`="BHFDX", `3`="Romano", `4`="Hochberg", `5`="Holm", `6`="Bonferroni")
-    TBL$Value[which(TBL$Parameter=="FDP.cnt")] <- cntl.nms[TBL$Value[which(TBL$Parameter=="FDP.cnt")]]
-    TBL
+    mthd.nms <- c(`1`="Theoretical", `2`="Simulation")
+    TBL$Value[which(TBL$Parameter=="FDP.control")] <- cntl.nms[TBL$Value[which(TBL$Parameter=="FDP.control")]]
+    TBL$Value[which(TBL$Parameter=="method")] <- mthd.nms[TBL$Value[which(TBL$Parameter=="method")]]
+    unique(TBL)
 }
 
 tm.pwrFDR <-
@@ -2891,7 +2964,7 @@ default <- list(u=function(...)seq(from=0,to=1,len=100),
                 groups=function(...)2,
                 control=function(groups=groups, alpha=alpha, corr.struct=corr.struct)
                         list(tol=1e-08, max.iter=c(1000,20), sim.level=2, FDP.meth.thresh=FDP.cntl.mth.thrsh.def,
-                             verb=FALSE, low.power.stop=TRUE, ast.le.a=TRUE, show.footer=FALSE),
+                             verb=FALSE, low.power.stop=TRUE, ast.le.a=TRUE, show.footer=TRUE),
                 distopt=function(groups=groups, alpha=alpha, corr.struct=corr.struct)
                 (0*(groups<=2 && (length(corr.struct$rho)>0)) + 1*(groups<=2 && (length(corr.struct)==0)) + 2*(groups>2)),
                 type=function(groups=groups,alpha=alpha, corr.struct=corr.struct)
@@ -2993,7 +3066,8 @@ function(sppld, frmls, m)
 
   pwr.nera.chk <- (!is.pwr && all(!is.msng[nera])) || (is.pwr && (sum(is.msng[nera])==1))
   
-  fdp.needs.N <- c("Auto", "BHFDX","Romano")
+  ## fdp.needs.N <- c("Auto", "BHFDX","Romano")
+  fdp.needs.N <- c("Auto", "BHFDX")
   
   msg.1 <- msg.2 <- msg.3 <- msg.4 <- msg.5 <- msg.6 <- msg.7 <- msg.8 <- msg.9 <- msg.10 <-
       msg.11 <- msg.12 <- msg.13 <- NULL

@@ -9,20 +9,23 @@
 \usepackage[utf8]{inputenc} \usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
 \usepackage{setspace}
 \usepackage[nomarkers,figuresonly]{endfloat}
+%\usepackage{float}
+%\newfloat{rcode}{h!t}{rcode}
+%\floatname{rcode}{Code Block}
 \renewcommand{\P}{{\mathbb{P}}}
 \newcommand{\E}{{\mathbb{E}}}
 \newcommand{\mrm}[1]{{\mathrm{#1}}} 
-\newcommand{\verblistelt}[2]{\texttt{{#1}\${#2}}}
+%%\newcommand{\verblistelt}[2]{\texttt{{#1}\${#2}}}
 \renewcommand{\ni}{{\vskip0.1truein \noindent}}
 \DeclareMathOperator{\var}{var}
 \doublespacing
 % \VignetteIndexEntry{Using pwrFDR}
 
 \begin{document}
-<<pwrFDRpd,include=FALSE,echo=FALSE>>=
+<<label=header,include=FALSE,echo=FALSE>>=
 options(keep.source = TRUE, width = 90, digits=4)
 pwrFDRpd <- packageDescription("pwrFDR")
-pct <- function(x, dig=2) format(ceiling(10^dig*100*x)/10^dig) %,% "\\\\%"
+pct <- function(x, dig=2) format(round(10^dig*100*x)/10^dig) %,% "\\\\%"
 one.in.k <-
 function(x, out="c")
 {
@@ -37,48 +40,107 @@ function(x, out="c")
 }
 @
 
+<<label=seqtstdat,include=FALSE,echo=FALSE>>=
+SeqTstDat10 <- 
+    as.data.frame(t(matrix(
+        c(1,3.93066049143225,0.000166075536538912,0.005,1,
+          1,2.74360567522164,0.00733385249064922,0.01,1,
+          1,2.41434752771541,0.0177875327883759,0.015,0,
+          1,2.38482062693501,0.0191857939241782,0.02,1,
+          1,2.23237296410553,0.028071740070398,0.025,0,
+          0,-1.90361989911666,0.0601552703570536,0.03,0,
+          0,1.12448792534619,0.263796263653014,0.035,0,
+          0,-1.00660629048567,0.316822712495861,0.04,0,
+          0,0.932733736292402,0.353453014154629,0.045,0,
+          0,0.90140806501516,0.369777327548002,0.05,0), 5, 10)))
+names(SeqTstDat10) <- c("xi", "X", "P", "BHFDR.crit", "Marked")
+@
+
 \title{Using pwrFDR in design and analysis of a multiple testing experiment (Version \Sexpr{pwrFDRpd$Version})}
 \author{Grant Izmirlian}
 \date{\Sexpr{Sys.Date()}}
 \maketitle
-The package, \texttt{pwrFDR}, is for computing Average and TPX Power under various sequential multiple testing
-procedures such as the Benjamini-Hochberg False Discovery Rate (BH-FDR) procedure. Before we begin, some review of
-multiple testing and sequential procedures is in order. Consider a multiple testing experiment with $m$ simultaneous
-tests of hypotheses. The most widely used multiple testing procedure is Bonferroni's procedure which guarantees control
-of the family-wise error rate (FWER) which is the probability of one or more false positives. It is applied by referring
-all p-values to the common threshold $\alpha/m$. The Benjamini-Hochberg procedure guarantees control of the false
-discovery rate (FDR). Since it gained widespread use in the early 2000's, most practitioners are at least vaguely
-familiar with the notion that the target of protected inference is different for the Bonferroni (FWER) and the BH-FDR
-(FDR) procedures. The domain of application and in particular the cost of a false positive guides the choice of the
-target for protected inference, with higher costs (drug development) requiring a more conservative target of control,
-and lower costs (thresholding in --omics studies) allowing for a less conservative target of control. Application of a
-sequential procedure in a multiple testing experiment (MTE) usually begins with ordering the $m$ p-values from smallest
-to largest and then comparing each sorted p-value with a corresponding member of a sequnce of criterion values.  This
-sequence of criterion values, also a non-decreasing sequence and specific to the particular procedure, is the product of
-$\alpha$ and a multiple testing penalty. All procedures begin with marking rows for which the sorted p-value is less
+
+\section{Introduction}
+The package \texttt{pwrFDR} allows computation of sample size required for average power or for TPX Power under various
+sequential multiple testing procedures such as the Benjamini-Hochberg False Discovery Rate (BH-FDR) procedure. Before we
+begin, we first load some libraries and then provide a brief review of multiple testing and sequential procedures.
+
+<<label=load-libs, echo=TRUE, results=hide>>=
+library(pwrFDR)
+library(ggplot2)
+library(TableMonster)
+@
+\ni In addition to the \texttt{pwrFDR} library, we load \texttt{ggplot2}, an advanced plotting package many readers
+will be familiar with, and \texttt{TableMonster}, and easy to use frontend to \texttt{xtable} for generating
+publication quality tables in \LaTeX.
+
+\ni In short, statistical hypothesis testing whereby a single p-value is compared to a threshhold value, $\alpha$, to
+determine statistical significance assures that the resulting conclusion has false positive rate less than
+$\alpha$. This guarantee applies in the context of a single statistical hypothesis test only.  Adjustment for multiple
+tests of hypotheses provides an algorithm whereby the comparison thresholds are adjusted so that some aggregate false
+positive rate is guaranteed. We will review several multiple testing procedures and discuss the aggregate false positive
+rate or target of \textit{protected inference} which each one controls. Consider a multiple testing experiment with $m$
+simultaneous tests of hypotheses. The most widely used multiple testing procedure is Bonferroni's
+\cite{BonferroniCE:1936} procedure which guarantees control of the family-wise error rate (FWER). This is the
+probability that of one or more of the hypothesis tests results in a false positive. It is applied by referring all
+p-values to the common threshold $\alpha/m$.  This quickly becomes overly conservative as the number of tests, $m$,
+becomes larger. The Benjamini-Hochberg \cite{BenjaminiY:1995} procedure guarantees control of the false discovery rate
+(FDR). This is the expected proportion of hypothesis tests declared significant which are false positives.  It is
+applied by sorting p-values in increasing order, comparing the $i^{\mrm{th}}$ largest to $\alpha i /m$ and then
+declaring all tests statistically significant which correspond to p-values not larger than the largest exceeded by its
+threshold. Thus the Bonferroni procedure and the BH-FDR procedure control different targets of protected inference. The
+domain of application and in particular the cost of a false positive guides the choice of the target for protected
+inference, with higher costs (drug development) requiring a more conservative target of control such as the FWE rate,
+and lower costs (thresholding in --omics studies) allowing for a less conservative target of control, such as the FDR.
+
+\ni We now discuss sequential multiple testing procedures in general. The application of a sequential procedure in a
+multiple testing experiment usually begins with ordering the $m$ p-values from smallest to largest and then comparing
+each sorted p-value with a corresponding member of a sequnce of criterion values.  This sequence of criterion values,
+also a non-decreasing sequence and specific to the particular procedure, is the product of $\alpha$ and a sequence of
+multiple testing penalties, $\psi_m(j)$. All procedures begin with marking rows for which the sorted p-value is less
 than its corresponding criterion value.
 
-\ni Sequential procedures differ in two main features. First is the choice of the sequence of criterion values, and
-secondly, by whether the procedure is step-up or step-down. This latter distinction provides a recipe for calling tests
-significant based upon marked/unmarked rows of p-value and criterion pairs. A step-up procedure calls significant all
-tests up until the last marked row. A step-down procedure calls significant tests belonging to a block of contiguous
-marked rows beginning with the first. If the first row is not marked, a step-down procedure calls nothing significant.
+\ni Sequential procedures are defined by two distinguishing features which in turn, provide a recipe for their
+application.  First is the chosen sequence of multiple testing penalties, and second, whether the procedure is step-up
+or step-down. This latter distinction provides a recipe for calling tests significant based upon marked/unmarked rows of
+p-value and criterion pairs. A step-up procedure calls significant all tests up until the last marked row. A step-down
+procedure calls significant tests belonging to a block of contiguous marked rows beginning with the first. If the first
+row is not marked, a step-down procedure calls nothing significant. Table \ref{tbl:SeqTstDat10} below shows p-values for
+10 simultaneous tests of hypotheses, and a sequence of threshold criterion values, $\alpha i/m$, with $\alpha=0.05$. This
+sequnce of threshold criterion values should be familiar as it is the one used in the BH-FDR procedure. Also shown in the
+table is an indicator of whether or not each p-value is less than or equal to its corresponding threshold value. A step
+up procedure based upon the given criterion sequence will call statistical tests corresponding to the smallest 4 p-values
+significant. Notice that this includes the third smallest p-value which was not smaller than its threshold value. A
+step-down procedure based upon the given criterion sequence would call only the first two tests significant. 
+
+<<label=show-SeqTstDat10, echo=FALSE, results=tex>>=
+basic.tmPrint(SeqTstDat10, lbl="tbl:SeqTstDat10", cptn="Sorted p-values, their test statistics, " %,%
+              "population indicators, and BH-FDR threshold in 10 simultaneous tests")
+@ 
 
 \ni We now discuss the number of significant calls and of these which are true positives and which are false
-positives. Let $R$ denote the number of tests called significant by the procedure. This partitions into the unobserved
-false positive count, $V$, e.g. the number of tests called significant which are distributed as the null, and unobserved
-true positive count, T, e.g. the number of tests called significant which are distributed as the alternative, $V + T =
-R$. The ratio, $\mrm{FDP}=V/R$ is called the false discovery proportion and the ratio, $\mrm{TPP}=T/M$ is called true
-positive proportion. Here $M$ is the number of statistics distributed as the alternative (more on this below). Within
-the fairly broad scope of sequential procedures considered here the goal of protected multiple inference will be to
-control some summary of the false discovery proportion distribution: $\P\{\mrm{FDP} > x \}=\P\{ V/R > x \}$. Protected
+positives. Let $R$ denote the number of tests called significant by the procedure. As mentioned above in our example,
+table \ref{tbl:SeqTstDat10} above, $R=4$ under the step-up procedure and $R=2$ under the step-down procedure. This
+partitions into the unobserved false positive count, $V$, e.g. the number of tests called significant which are
+distributed as the null, and unobserved true positive count, T, e.g. the number of tests called significant which are
+distributed as the alternative, $V + T = R$. We see that $V=0$ under both the step-up and step-down procedures, while
+$T=3$ under the step-up procedure and $T=2$ under the step-down procedure. The ratio, $\mrm{FDP}=V/R$ is called the
+false discovery proportion and the ratio, $\mrm{TPP}=T/M$ is called true positive proportion. Here $M$ is the number of
+statistics distributed as the alternative (more on this below). We see that $\mrm{FDP}=0$ under both the step-up and
+step-down procedures, while $\mrm{TPP}=3/5$ under the step-up procedure, and $\mrm{TPP}=2/5$ under the step-down
+procedure. We note in passing that the BH-FDR procedure is the step-up procedure based upon the given criterion
+sequence.
+
+\ni Within the fairly broad scope of sequential procedures considered here the goal of protected multiple inference will
+be to control some summary of the false discovery proportion distribution: $\P\{\mrm{FDP}>x\}=\P\{V/R >x\}$. Protected
 inference must be done within the context of some definition of multiple test or aggregate power so that multiple
 testing experiments can be sized and so that we have some idea of the probability of success as defined appropriately
 for the application. We will consider definitions of aggregate power based upon some summary of the true positive
 proportion distribution: $\P\{\mrm{TPP} > x \}=\P\{ T/M > x \}$.
 
-\ni The BH-FDR procedure is a step-up procedure with criterion sequence $\alpha j/m$. It guarantees control of the FDR,
-which is the expected FDP: 
+\ni As previously noted, the BH-FDR procedure is a step-up procedure with multiple testing penalty sequence
+$\psi_m(j) = j/m$. It guarantees control of the FDR, which is the expected FDP:
 \begin{equation}
 \mrm{FDR}=\E[\mrm{FDP}]=\E[V/R]\nonumber
 \end{equation}
@@ -95,20 +157,13 @@ $\mrm{FDR}=15\%$ when the effect size is 0.79. There is one more parameter requi
 multiple test power besides the usual required power, type I error and effect size which are sufficient to calculate the
 sample size in the single testing case. Whereas in the single test case, we condition upon the statistic being drawn
 from the null or the alternative, in the multiple testing case we must somehow make a specification regarding the number
-of tests distributed as the alternative. We handle this by posing the mixture model as the common distribution of the
-test statistics. Under the mixture model, the population from which each test statistic is drawn is determined via an a
-priori density $r_1$ coin flip per test statistic, the value 1 signifying the alternative distribution. This is the
-additional parameter which must be specified. In applications, a reasonable working value is drawn from substance
-experts. Let us assume this is 5\%, the value typically used in larger --omics studies like mRNA profiling and RNAseq
-(\cite{AlizadehAA:2000, MortazaviA:2008}).
-
-\ni In order to do this we load the \texttt{pwrFDR} library as well as the \texttt{ggplot2} and \texttt{TableMonster}
-libraries. The latter two libraries are for plotting and for easy generation of nice looking latex tables. 
-<<label=load-libs>>=
-library(pwrFDR)
-library(ggplot2)
-library(TableMonster)
-@
+of tests distributed as the alternative. Our methodology assumes a common mixture distribution for the p-value CDF. This
+means that each test statistic is distributed according to the alternative hypothesis with probability, $r_1$, and
+distributed according to the null hypothesis with the complementary probability. This is the additional parameter which
+must be specified. In applications, a reasonable working value is drawn from substance experts. Let us assume this is
+5\%, the value typically used in larger --omics studies like mRNA profiling and RNAseq (\cite{AlizadehAA:2000,
+  MortazaviA:2008}). The last argument, which was not specified, \texttt{FDP.control.method}, takes its default value,
+\texttt{"BHFDR"}, as we here desire.
 
 <<label=vinfo, echo=FALSE, results=hide>>=
 rhome <- Sys.getenv("R_HOME")
@@ -122,109 +177,160 @@ at \verb!\Sexpr{rscript.path}!.
 \ni We are now ready to call \texttt{pwrFDR} to calculate sample size required for 80\% average power under the BH-FDR
 procedure at $\alpha=0.15$ and above mentioned effect size and prior probability: 
 
+%\begin{rcode}
 <<label=avgpwr_minf>>=
-avgpwr.fdr.r05 <- pwrFDR(effect.size=0.79, alpha=0.15, r.1=0.05, average.power=0.80)
+ss.fdr.r05 <- pwrFDR(effect.size=0.79, alpha=0.15, r.1=0.05, average.power=0.80)
 @
+%\end{rcode}
 
-\ni Notice that we did not specify the number of tests. This calculates the infinite tests limit which exists for
-procedures controlling the FDR and for procedures controlling the FDX, but not for procedures controlling the
-family-wise error rate (FWER). While we're at it, in order to see how much the alternative hypothesis prior probability,
-$r_1$ affects the required sample size, let's calculate sample size required for 80\% average power under BH-FDR at
-$\alpha=0.15$ under the above settings ammended to incorporate a higher prior probability, $r.1=0.10$.
+\ni Notice that we did not specify the number of tests. The calculation is done using the infinite tests consistent
+limit approximation. This consistent limit exists for procedures controlling the FDR and for procedures controlling the
+FDX, but not for procedures controlling the family-wise error rate (FWER).
+
+\ni As is the case with the base R library supplied power functions like \texttt{power.t.test}, the routine will solve
+for any missing parameter, except in this case, $\alpha$ must be specified. This means that the routine will calculate
+the average power or TPX power (see below) under the specified procedure at the given alpha at the specified effect size
+and prior probility. It will also find the required sample size, effect size, or prior probability required for
+specified average power or TPX power for given values of the other parameters.  For example the following 4 lines of
+code return essentially the same result, but calculate, in order listed, the average power, the sample size required for
+average power, the effect size required for average power, and the prior probability required for average power,
+respectively, for given values of the other parameters.
+
+<<label=solve-for, echo=TRUE, results=hide>>=
+find.avp <- pwrFDR(effect.size=0.79, alpha=0.15, n.sample=ss.fdr.r05$n.sample, r.1=0.05)
+find.ss <- pwrFDR(effect.size=0.79, alpha=0.15, r.1=0.05, average.power=0.80)
+find.es <- pwrFDR(alpha=0.15, n.sample=ss.fdr.r05$n.sample, r.1=0.05, average.power=0.80)
+find.r1 <- pwrFDR(effect.size=0.79, alpha=0.15, n.sample=ss.fdr.r05$n.sample, average.power=0.80)
+@ 
+
+\ni The point is that of the four parameters, desired power (average or TPX), effect size, sample size and prior
+probability, the user must specify $\alpha$ together with three of these and the missing one will be calculated. See the
+help documentation for more information.
+
+\ni While we're at it, in order to see how much the alternative hypothesis prior probability, $r_1$, affects the required
+sample size, let's calculate sample size required for 80\% average power under BH-FDR at $\alpha=0.15$ under the above
+settings ammended to incorporate a higher prior probability, $r.1=0.10$.
+
 <<label=avgpwr_r10_minf>>=
-avgpwr.fdr.r10 <- update(avgpwr.fdr.r05, r.1=0.10)
+ss.fdr.r10 <- update(ss.fdr.r05, r.1=0.10)
 @
 
 \ni The following line generates a publication ready table. 
 <<label=avgpwr-tbl, echo=TRUE, results=hide>>=
-print(avgpwr.fdr.r05, label="tbl:minf", result="tex", cptn="$m=\\infty$")
+print(ss.fdr.r05, label="tbl:minf", result="tex", cptn="$m=\\infty$")
 @
 
 \ni or we can join the two tables into one, also adding a caption
 <<label=avgpwr-tbl-join, echo=TRUE, results=tex>>=
-print(join.tbl(avgpwr.fdr.r05, avgpwr.fdr.r10), label="tbl:minf-r05-r10",
+print(join.tbl(ss.fdr.r05, ss.fdr.r10), label="tbl:minf-r05-r10",
                result="tex", cptn="$m=\\infty, r_1=0.05, 0.10$")
 @
 
-\ni From the third and seventh lines in table \ref{tbl:minf-r05-r10} we can see that sample sizes of
-\Sexpr{avgpwr.fdr.r05$n.sample} and \Sexpr{avgpwr.fdr.r10$n.sample} are required for 80\% average power under BH-FDR at
-$\alpha=0.15$ when the effect size is 0.79 and the prior probabilities are $r_1=5\%$ and 10\% respectively. The meaning
-of the other entries in the table are as follows. The first line shows that the sample size was calculated using the
-infinite tests limit since no value of $m$ (\texttt{N.tests} in the routine) was specified. The second, forth, fifth,
-and seventh rows show values of the user specified parameters, $r_1$, the effect size, $\alpha$ and the average
-power. The sixth row indicates that the default method of FDP control, ``BHFDR'' was used as there was no user specified
-value. The eighth row shows the value of the rejection rate or positive rate, which is the inifinite tests consistent
-limit of the proportion of positive calls, R/m. The bottom three rows show the asymptotic standard deviations for the
-rejection proportion, $R/m$, the false discovery proportion, $V/R$ and the true positive proportion, $T/M$. We shall see
-why it is useful to know these below.
+\ni The first six lines are user specified parameters or default values, and the seventh through tenth lines are
+calculated by the function. As for the last two lines, sample size and power, as is usually the case, one is specified
+and the other is calculated. The first line indicates that calculations were done according to the theoretical method,
+which in the case of average power under FDR control is the infinite tests consistent limit approximation. Lines 2 and 4
+are here default values. The default method of FDP control is \texttt{"BHFDR"} as mentioned above and the value
+\texttt{Inf} for \texttt{N.tests} signifies the infinite tests consistent limit is being used, and in this case
+specification of \texttt{N.tests} is not required. Not to belabor an obvious point, but this means that all quantities
+derived are independent of the number of simultaneous tests. We shall discuss when and how this assumption breaks down
+below. Lines 3, 5, and 6, being $\alpha, r_1$ and \texttt{effect.size}, respectively, are user specified as discussed
+above. Recall that result a and b differ only by the specified value for prior probability, $r_1$, being 0.05 and 0.10,
+respectively. The first of the derived values, $\gamma$, on line 7, is the infinite tests consistent limit of
+$R/m$. This limit is the rejection rate, or expected proportion of all tests which are declared significant. The next
+three lines are the asymptotic standard deviations of the rejection proportion, $R/m$, the false discovery proportion,
+$V/R$, and the true positive proportion, $T/M$. We will see below why it is useful to know these. Lines 11 and 12 are
+the sample size and average power, respectively. In this case we specified average power and the function calculated
+required sample size given the other parameter values. Comparing results ``a'' and ``b'' it is clear that doubling the
+prior probability, $r_1$, results in roughly a doubling of the rejection rate, $\gamma$, and roughly three quarters the
+sample size required for \Sexpr{pct(ss.fdr.r05$average.power, 1)} average power.
 
-\ni In any case we can always use simulation. In this case we must specify the number of tests. The simulation method
-will not find sample size required for specifed power, so we must also specify the sample size instead and compute the
-power (average power in this case). The simulation routine generates replicate data-sets, each containing $m$ full data
-records, each consisting of a population indicator (bernouli, probability $r_1$), test statistic distributed under the
-null or alternative corresponding to the value of the population indicator, and corresponding p-values. For each
-simulation replicate the requested procedure is applied to the $m$ test statistics, and then the numbers of rejected
-tests, $R$, and true positives, $T$, are recorded. The number of statistics distributed as the alternative, $M$, is also
-recorded. Of course the number of false positives isn't recorded because it can be found via subtraction: $V=R-T$. These
-per simulation replicate statistics are in the \texttt{reps} component of the \texttt{detail} attribute which is
-obtained in this setting via the expression \verblistelt{detail(avgpwr.fdr.sim.r05.m1e5)}{reps}.  In the following
-code-block, we call the simulation option with \num{10000} tests at a sample size of
-\Sexpr{avgpwr.fdr.r05$n.sample}. The first line of code calls \texttt{pwrFDR} at the previous parameter settings in
-simulation mode. The second line calculates the empirical FDR as the mean of the FDP divided by $(1-r_1)=0.95$. Note
-that it is actually an slight abuse of nomenclature that we refer to \textit{both} the expected value of $V/R$
-\textit{and} $\alpha$ as the false discovery rate, even though the former is in fact $(1-r_1)\alpha$. Notice that we use
-the operator \verb!%over%! instead of the ordinary division operator, \texttt{/}, since, when it is applied
-component-wise, any occurrences of $0/0$ are treated as $0$.
-
+\ni The package provides a simulation method as a check on the variety of theoretical methods used.
+In this case we must specify the number of tests. The simulation method
+will not find sample size required for specifed power as it is impractical given the use of a back-solver resulting
+in more than 20 calls to the function. Thus we must instead request a computation of power (average power in this case)
+given specified sample size. The simulation routine generates replicate data-sets, each containing $m$ full data
+records, where each of these consist of a population indicator (bernouli, probability $r_1$), a test statistic
+distributed under the alternative or null corresponding to the value of the population indicator, and a corresponding
+p-value. For each simulation replicate dataset, the requested procedure is applied to the $m$ test statistics, and then
+the numbers of rejected tests, $R$, and true positives, $T$, are recorded. The number of statistics distributed as the
+alternative, $M$, is also recorded. Of course, the number of false positives need not be recorded as it can be found via
+subtraction: $V=R-T$. These per simulation replicate statistics are in the \texttt{reps} component of the
+\texttt{detail} attribute, which can be obtained for given a \texttt{pwrFDR} object, \texttt{result}, via the expression
+\texttt{detail(result)[["reps"]]}. In the following code block we call \texttt{pwrFDR} via the \texttt{"simulation"} method
+at the parameter settings used in \texttt{ss.fdr.r10} above when the number of simultaneous tests is \num{10000},
+\num{1000}, and 100, respectively in the three following lines of code.
 <<label=avgpwr-sim, results=hide>>=
-avgpwr.fdr.sim.r05.m1e5 <- pwrFDR(effect.size=0.79, alpha=0.15, r.1=0.05,
-                                n.sample=avgpwr.fdr.r05$n.sample, N.tests=10000,
+avgpwr.fdr.sim.r10.m1e5 <- pwrFDR(effect.size=0.79, alpha=0.15, r.1=0.10,
+                                  n.sample=ss.fdr.r10$n.sample, N.tests=10000,
                                   meth="sim")
 
-avgpwr.fdr.sim.r05.m1e3 <- update(avgpwr.fdr.sim.r05.m1e5, N.tests=1000)
+avgpwr.fdr.sim.r10.m1e3 <- update(avgpwr.fdr.sim.r10.m1e5, N.tests=1000)
 
-avgpwr.fdr.sim.r05.m100 <- update(avgpwr.fdr.sim.r05.m1e5, N.tests=100)
-
-avgpwr.fdr.r10.sim.m100 <- update(avgpwr.fdr.r10, n.sample=avgpwr.fdr.r10$n.sample,
-                                  average.power=NULL, method="sim", N.tests=100)
+avgpwr.fdr.sim.r10.m100 <- update(avgpwr.fdr.sim.r10.m1e5, N.tests=100)
 @
 
 <<label=genplotVoRr10m100, echo=FALSE, results=tex>>=
-print(join.tbl(avgpwr.fdr.sim.r05.m1e5, avgpwr.fdr.sim.r05.m1e3, avgpwr.fdr.sim.r05.m100, avgpwr.fdr.r10.sim.m100), 
-      label="tbl:sim_cmpst", result="tex", cptn="Results of simulation calls with varying `m' and `r.1'.")
+print(join.tbl(avgpwr.fdr.sim.r10.m1e5, avgpwr.fdr.sim.r10.m1e3, avgpwr.fdr.sim.r10.m100), label="tbl:sim_cmpst",
+      result="tex", cptn="Results of simulation calls with varying `m'.")
 @
 
-\ni Next, looking at the first three columns of table \ref{tbl:sim_cmpst}, we see that passing from
-\Sexpr{avgpwr.fdr.sim.r05.m1e5$N.tests}, to \Sexpr{avgpwr.fdr.sim.r05.m1e3$N.tests}, to
-\Sexpr{avgpwr.fdr.sim.r05.m100$N.tests} simultaneous tests changes nothing regarding the sample size required for
-average power \Sexpr{pct(avgpwr.fdr.sim.r05.m1e5$average.power)}. This is because the average power is independent of
-the number of tests and is in fact the infinite tests limit of the true positive proportion. The empirical FDR also is
-the same, at least to within simulation error. The only values which change are the standard errors of the positive
-proportion, false discovery proportion and true positive proportion, as these are of order one over the square root of
-number of tests. Note that these empirical standard errors times $\sqrt{m}$, e.g. the square root of \texttt{N.tests} as
-shown in the table, aggree well with their asymptotic values shown in the table \ref{tbl:sim_cmpst}. The final column
-which was run with identical parameters except for $r_1=0.10$ for $m=100$ simultaneous tests shows a smaller sample size
-required for 80\% average power, smaller emprical FDR and nearly twice as large rejection fraction, $\gamma$. This makes
-sense because there twice as many statistics are expected to be distributed as the null.
+\ni Comparing the simulation results in each of the three columns in table \ref{tbl:sim_cmpst} with the theoretical
+approximation at the same design parameters in the second column of table \ref{tbl:minf-r05-r10}, the only differences
+in derived results beyond that expected from simulation error are the designation that the \texttt{"Simulation"} method
+was used, what appear to be standard errors of the rejection proportion, false discovery proportion and true positive
+proportion as opposed to asymptotic standard deviations, and appearance of two new derived quantities, \texttt{emp.FDR}
+and \texttt{emp.FDX}. First, when the number of tests, \texttt{N.tests}, is specified, the function returns estimated
+standard errors instead of asymptotic standard deviations, these being the latter divided by the square root of the
+number of tests. Secondly, the two new derived quantities are the empirical FDR and FDX derived as simulation estimates.
+The latter estimates $\P\{ \mrm{FDP} > \alpha \}$, the probability that the false discovery proportion exceeds $\alpha$.
+Notice that the empirical FDR's corresponding to the differing numbers of simultaneous tests are identical to within
+simulation error, but the standard error of the false discovery proportion, as well as those of the other two ratios
+increase in proportion to the ratio of the square root of number of tests. While the location, i.e. the mean of the FDP
+distribution remains more or less constant as the number of tests decreases from \num{10000} to 100, the width of the
+distribution grows. The point is that the BH-FDR procedure guarantees that the mean of the FDP will be less than
+$\alpha$, but not what the width of the distribution will be. BH-FDR control means that if a multiple testing experiment
+is repeated then the FDP's corresponding to each experiment will have average value less than $\alpha$. Per experiment
+values of FDP's may vary wildly and in fact, have high probability of being unacceptably large. Here we see that while
+for \num{10000} tests, the probabiliy that the FDP exceeds $\alpha$ is roughly
+\Sexpr{pct(avgpwr.fdr.sim.r10.m1e5$emp.FDX,0)}, it becomes quite large as the number of tests decreases, being
+\Sexpr{pct(avgpwr.fdr.sim.r10.m1e3$emp.FDX, 0)}, \Sexpr{pct(avgpwr.fdr.sim.r10.m100$emp.FDX, 0)} when the number of
+tests is \num{1000} and \num{100}, respectively. This raises the question as to whether BH-FDR control is appropriate
+for a moderate to small number of simultaneous tests.
 
-\ni So judging by the results shown in table \ref{tbl:sim_cmpst} alone, it seems that the BH-FDR procedure controls
-the FDR, no matter the number of test statistics, just as stated in the results proved by Benjamini and Hochberg. Lets
-pay special attention to what is being controlled. As we mentioned previously, the FDR is the expected proportion of
-false discoveries, $\E[\mrm{FDP}] = \E[V/R]$. And above, in the table we corroborate that the empirical false discovery rate
-(eFDR) is indeed less than or equal to the nominal value. The eFDR is the average over 1000 multiple testing experiments
-defined by the parameters in the calling sequence. What we are in fact guaranteed of controlling is an average value
-over many identical multiple testing experiments. This average itself is only meaningful if the distribution of the
-FDP is tightly distributed above its mean, as is the case with several thousand simultaneous tests, $m=10000$. If the
-FDP is not tightly distributed above its mean, the FDR says little to nothing about the FDP for any one given multiple
-testing experiment.
+\section{Caveats Arising from FDR control and Use of Average Power}
+\ni This point regarding the appropriateness of BH-FDR control for a moderate to small number of simultaneous tests
+is made clearer by having a look at the distribution of the FDP as the number of tests decreases. We will re-run
+the above simulations for 6 multiple testing experiments at the same design parameter settings when the number
+of tests is \num{10000}, \num{2000}, \num{1000}, \num{500}, \num{250}, and \num{100}, respectively. 
 
+<<label=cmpt-ss>>=
+ss <- pwrFDR(effect.size = 0.79, average.power=0.80, r.1 = 0.10, alpha = 0.15)
+avgp <- update(ss, average.power=NULL, n.sample=ss$n.sample)
+@ 
 
 <<label=gen-FDP-violin-plot, echo=FALSE, results=hide>>=
 sim <- list()
-m.lst <- list(m10000=10000, m2000=2000, m1000=1000, m500=500, m100=100)
-for(k in 1:length(m.lst))
-sim[[names(m.lst)[k]]] <- pwrFDR(effect.size = 0.79, n.sample = 47, r.1 = 0.20, alpha = 0.15, method = "sim", N.tests=m.lst[[k]])
+FDX20.tbl <- TPX70.tbl <- NULL
+m.lst <- list(m10000=10000, m2000=2000, m1000=1000, m500=500, m250=250, m100=100)
+n.mlst <- length(m.lst)
+for(k in 1:n.mlst)
+{
+  sim[[names(m.lst)[k]]] <- update(avgp, method = "sim", N.tests=m.lst[[k]])
+  FDX20.tbl <- c(FDX20.tbl, with(detail(sim[[names(m.lst)[k]]])$reps, mean((R-T)%over%R>=0.20)))
+  TPX70.tbl <- c(TPX70.tbl, with(detail(sim[[names(m.lst)[k]]])$reps, mean( T %over% M1 < 0.70)))
+}
+FDX20.tbl <- as.data.frame(rbind(FDX20.tbl))
+names(FDX20.tbl) <- m.lst
+FDX20.tbl <- format(FDX20.tbl)
 
+TPX70.tbl <- as.data.frame(rbind(TPX70.tbl))
+names(TPX70.tbl) <- m.lst
+TPX70.tbl <- format(TPX70.tbl)
+
+FDX20.TPX70.tbl <- rbind(FDX20.tbl, TPX70.tbl)
+FDX20.TPX70.tbl <- cbind(` `=c("$P(\\mrm{FDP} \\geq 0.20)$", "$P(\\mrm{TPP} < 0.70)$"), FDX20.TPX70.tbl)
+    
 n.sim <- nrow(detail(sim[["m10000"]])$reps)
 FDP.dat <- TPP.dat <- NULL
 for(k in 1:length(m.lst))
@@ -235,14 +341,20 @@ for(k in 1:length(m.lst))
 
 FDP.dat <- data.frame(FDP=FDP.dat)
 FDP.dat$group <- rep(unlist(m.lst), each=n.sim)
-FDP.dat$group <- ordered(FDP.dat$group, levels=FDP.dat$group[1000*(0:4)+1])
+FDP.dat$group <- ordered(FDP.dat$group, levels=FDP.dat$group[1000*(0:(n.mlst-1))+1])
 FDP.plot <- ggplot()+geom_violin(position="dodge", alpha=0.5, aes(y=FDP, x=group), data=FDP.dat) + ylim(c(0, 0.4))
 
 TPP.dat <- data.frame(TPP=TPP.dat)
 TPP.dat$group <- rep(unlist(m.lst), each=n.sim)
-TPP.dat$group <- ordered(TPP.dat$group, levels=TPP.dat$group[1000*(0:4)+1])
-TPP.plot <- ggplot()+geom_violin(position="dodge", alpha=0.5, aes(y=TPP, x=group), data=TPP.dat) + ylim(c(0.8, 1))
+TPP.dat$group <- ordered(TPP.dat$group, levels=TPP.dat$group[1000*(0:(n.mlst-1))+1])
+TPP.plot <- ggplot()+geom_violin(position="dodge", alpha=0.5, aes(y=TPP, x=group), data=TPP.dat) + ylim(c(0.6, 1))
 @
+
+<<label=prnt.excdnc, echo=FALSE, results=tex>>=
+basic.tmPrint(FDX20.TPX70.tbl, cptn="Simulation estimates of indicated probabilities of FDX and TPX for indicated " %,%
+                                    "values of $m$ when $\\alpha=0.15, r_1=0.20$, effect size 0.79 with average " %,%
+                                    "power 80\\%", lbl="tbl:FDX20")
+@ 
 
 \begin{figure}
   \begin{centering}
@@ -255,7 +367,6 @@ FDP.plot
   \label{fig:FDP-violin-plot}
 \end{figure}
 
-
 \begin{figure}
   \begin{centering}
 <<label=plot-TPP-violin-plot, echo=FALSE, fig=TRUE, height=4>>=
@@ -266,6 +377,81 @@ TPP.plot
            effect.size=0.79, n.sample=47, r.1=0.20, alpha=0.15}
   \label{fig:TPP-violin-plot}
 \end{figure}
+
+\ni A sample of \Sexpr{ss[["n.sample"]]} is required for \Sexpr{pct(ss[["average.power"]])} average power. Figure
+\ref{fig:FDP-violin-plot} below shows violin plots of the FDP distribution for varying values of $m$ from 10,000 down to
+100 when the FDR is 15\% and the other parameters are as indicated above. It is clear that the spread of the FDP
+distribution goes from very narrow to very disperse. In the more dispersed cases for 250 and 100 tests, it is clear that
+controlling the mean of the FDP distribution offers little assurance as to the value of the FDP. Table \ref{tbl:FDX20}
+shows the probability that the FDP exceeds 20\% for each of the indicated values of $m$. At the most extreme level of
+dispersion when $m=100$, the probability that the FDP exceeds 20\% is roughly 20\%. It is easy to be lulled into a sense
+that FDR control at 15\% means that the FDP will be less than 15\% but here is probability 133\% of this value that it
+exceeds a value 133\% of the target. At the larger numbers of tests, the simulation estimate of exceedence probability
+is zero, suggesting that FDR control is a good indication that the FDP is controlled when the number of tests is larger.
+
+\ni Similar caveats arise from the use of the average power to define the power for a multiple testing experiment. The
+average power is the expected value of the TPP, which can be thought of as the average TPP over many identical multiple
+testing experiments. That a given sample size guarantees average power says very little about what the TPP will be for
+any one given multiple testing experiment. Figure \ref{fig:TPP-violin-plot} below shows violin plots of the TPP
+distribution for varying values of $m$ from 10,000 down to 100 when the average power is 80\% and the other parameters
+are as indicated above. Once again, it is clear that the spread of the TPP distribution goes from very narrow to very
+disperse. In the more dispersed cases for 250 and 100 tests, it is clear that controlling the mean of the TPP
+distribution offers little assurance as to the value of the TPP. Table \ref{tbl:FDX20} shows the probability that the
+TPP is less than  70\% for each of the indicated values of $m$. At the most extreme level of dispersion when $m=100$, the
+probability that the TPP is less than 80\% is roughly 15\%. It is easy to be lulled into a sense that a sample size
+required for average power 80\% means that the TPP will 80\% but here is probability 15\% that the TPP
+is less than 70\%. At the larger numbers of tests, the simulation estimate of the probability that the TPP is less
+than 70\% is zero, suggesting that the use of average power to size a multiple testing experiment will result in
+an equally high TPP when the number of tests is large.
+
+\section{FDX control and the TPX Power}
+\ni When the FDP distribution is too dispersed as we saw above in the case of only several hundred tests, a more
+reliable method of controlling the value of the FDP is to control the probability that the FDP exceeds a given
+threshold, $\P\{\mrm{FDP}>\delta\} \leq \alpha$, known as $\mrm{FDX}$ control. A procedure due to Lehmann, Romano and
+Shaikh, \cite{LehmannEL:2005, RomanoJP:2006}, controls the FDX. It is a step-down procedure with multiple testing
+penalty sequence,
+\begin{equation}
+  \psi_m(j; \delta) = \frac{1 + \lfloor \delta j \rfloor}{m + 1 + \lfloor \delta j \rfloor - j}
+\end{equation}
+
+\ni Lets compute the sample size required for 80\% average power under the Lehmann-Romano-Shaikh procedure when
+$\alpha=0.15$. This call is exactly the same as the very first sample size we computed above except that we specify
+\texttt{FDP.control.method="Romano"} to override its default value, ``FDR'' . 
+<<label=cmpt-ss-Rom-Inf>>=
+ss.Rom <- pwrFDR(effect.size = 0.79, average.power=0.80, r.1 = 0.20, alpha = 0.15,
+                 FDP.control.method="Romano")
+@
+
+\ni The following table was generated 
+<<label=cmpt-avgp-Rom-Inf, echo=FALSE, results=hide>>=
+avgp.Rom <- pwrFDR(effect.size = 0.79, n.sample=ss.Rom$n.sample, r.1 = 0.20, alpha = 0.15,
+                   FDP.control.method="Romano")
+avgp.Rom.500.sim <- update(avgp.Rom, N.tests=500, method="sim")
+avgp.Rom.250.sim <- update(avgp.Rom, N.tests=250, method="sim")
+avgp.Rom.100.sim <- update(avgp.Rom, N.tests=100, method="sim")
+@
+
+<<label=prt-Rom, echo=FALSE, results=tex>>=
+print(join.tbl(avgp.Rom.500.sim, avgp.Rom.250.sim, avgp.Rom.100.sim), result="tex", cptn=" ", label=" ")
+@ 
+
+<<label=cmpt-BHFDX>>=
+ss.BHFDX.500 <- pwrFDR(effect.size = 0.79, average.power=0.80, r.1 = 0.20, alpha = 0.15,
+                       FDP.control.method="BHFDX", N.tests=500)
+ss.BHFDX.250 <- update(ss.BHFDX.500, N.tests=250)
+ss.BHFDX.100 <- update(ss.BHFDX.500, N.tests=100)
+
+avgp.BHFDX.500.sim <- update(ss.BHFDX.500, n.sample=ss.BHFDX.500$n.sample, average.power=NULL,
+                             method="sim")
+avgp.BHFDX.250.sim <- update(ss.BHFDX.250, n.sample=ss.BHFDX.250$n.sample, average.power=NULL,
+                             method="sim")
+avgp.BHFDX.100.sim <- update(ss.BHFDX.100, n.sample=ss.BHFDX.100$n.sample, average.power=NULL,
+                             method="sim")
+@
+
+<<label=prt-BHFDX, echo=FALSE, results=tex>>=
+print(join.tbl(avgp.BHFDX.500.sim, avgp.BHFDX.250.sim, avgp.BHFDX.100.sim), result="tex", cptn=" ", label=" ")
+@
 
 \bibliographystyle{plain}
 \bibliography{pwrFDR-vignette}

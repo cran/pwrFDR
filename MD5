@@ -1,14 +1,14 @@
-c8ae6a0e83ef2417413da515d4e871c4 *DESCRIPTION
+b6c20b646aaf1dbd9d0c360e6880b5f3 *DESCRIPTION
 6a1e7cfbe55071a25df6261050395b99 *NAMESPACE
-81980957a68a7d2a2bbd5bf74f861bcd *R/pwrFDR.R
+b13c6cac33ee326ea83963e3bd74ade7 *R/pwrFDR.R
 3c6d64695fbef07ed5a0b4920922e265 *build/vignette.rds
 84a5ba32bfc717f1f973bc7dbdf32625 *inst/CITATION
 6c70034b17e80d51001133c65bf20c14 *inst/developer-notes.txt
-440abee1a313498244cef338b4297229 *inst/doc/pwrFDR-vignette.R
-9281896bfcbdd9bc22ab59839ea02411 *inst/doc/pwrFDR-vignette.Rnw
-c72ab524db1d478428188543d737e98a *inst/doc/pwrFDR-vignette.pdf
+be262df2a25448ea9f4b41a149d34379 *inst/doc/pwrFDR-vignette.R
+b4b1308d2fc88ad45e08ac6faba214ac *inst/doc/pwrFDR-vignette.Rnw
+a63b0f79b4d0a2b510bde94c3d95ba7b *inst/doc/pwrFDR-vignette.pdf
 731b784137865619abe532bbd802adab *inst/notes.txt
-ff081b017bdcba60cc69fa0ff77bf5f6 *man/Ch01-pwrFDR.Rd
+99817a74d6c767bd5a8c6fc9f15fccae *man/Ch01-pwrFDR.Rd
 b2c834ef76c07ae3f933ee6b70857827 *man/Ch02-pwrFDR-grid.Rd
 7697fc1285e484861f7fe9299c3bc6b0 *man/Ch03-controlFDP.Rd
 548b1188cf914c6c5a60eefe057a5314 *man/Ch04-dists.Rd
@@ -39,5 +39,5 @@ f486ca0da7f94c157b65683ef6eaa6c3 *man/Ch27-if-y-z.Rd
 d26b43fa2a73a787c17d4eee0ab2a422 *man/Ch29-backsolve-seFDPoalpha.Rd
 a8a57e2b1ad1290f6f7b561a93ec4cbc *man/Ch30-basic-tmPrint.Rd
 4a1d304ba54289bd1e57a7f4ab3671a6 *man/Ch31-join-tbl.Rd
-9281896bfcbdd9bc22ab59839ea02411 *vignettes/pwrFDR-vignette.Rnw
+b4b1308d2fc88ad45e08ac6faba214ac *vignettes/pwrFDR-vignette.Rnw
 260ddd172d1b74a01c9761275f02d1df *vignettes/pwrFDR-vignette.bib

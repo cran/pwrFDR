@@ -27,7 +27,7 @@
          distopt=1, method = c("Theoretical","simulation"), n.sim = 1000, temp.file,
          control=list(tol=1e-08, max.iter=c(1000, 20), sim.level=2, low.power.stop=TRUE, 
                       FDP.meth.thresh=FDP.cntl.mth.thrsh.def, ast.le.a=TRUE, verb=FALSE,
-                      show.footer=FALSE)) 
+                      show.footer=TRUE)) 
 }
 \arguments{
   \item{effect.size}{
